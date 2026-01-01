@@ -1,0 +1,22 @@
+# PowerShell
+*.pssc
+*.psc1
+.PSFramework/
+
+# Credentials/Secrets
+*.creds
+*.secret
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporär
+*.tmp
+*.bak
