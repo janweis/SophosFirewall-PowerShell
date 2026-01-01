@@ -56,7 +56,7 @@ jobs:
       
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pester-results-ps${{ matrix.name }}
           path: TestResults.xml
@@ -73,19 +73,26 @@ jobs:
         shell: pwsh
         run: |
           Install-Module -Name PSScriptAnalyzer -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module PSScriptAnalyzer -Force
       
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
-          $analyzerResults = Invoke-ScriptAnalyzer -Path 'Modules' -Recurse -ExcludeRule PSUseApprovedVerbs | 
-            Where-Object { $_.Severity -in @('Error', 'Warning') }
-          
-          if ($analyzerResults) {
-            $analyzerResults | Format-Table -AutoSize
-            Write-Error "PSScriptAnalyzer found issues"
+          try {
+            $analyzerResults = Invoke-ScriptAnalyzer -Path 'Modules' -Recurse -ExcludeRule PSUseApprovedVerbs -ErrorAction Stop | 
+              Where-Object { $_.Severity -in @('Error', 'Warning') }
+            
+            if ($analyzerResults) {
+              $analyzerResults | Format-Table -AutoSize
+              Write-Error "PSScriptAnalyzer found issues"
+              exit 1
+            } else {
+              Write-Host "✓ No code analysis issues found"
+            }
+          }
+          catch {
+            Write-Error "PSScriptAnalyzer execution failed: $_"
             exit 1
-          } else {
-            Write-Host "✓ No code analysis issues found"
           }
       
       - name: Validate Module Manifests
@@ -116,11 +123,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Set up PowerShell
-        uses: actions/setup-pwsh@v2
-        with:
-          pwsh-version: latest
       
       - name: Scan for Hardcoded Credentials
         shell: pwsh
@@ -158,11 +160,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up PowerShell
-        uses: actions/setup-pwsh@v2
-        with:
-          pwsh-version: latest
-      
       - name: Build Modules
         shell: pwsh
         run: |
@@ -183,7 +180,7 @@ jobs:
           Write-Host "✓ Build complete: $buildPath"
       
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sophos-firewall-modules
           path: _Build/
