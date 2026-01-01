@@ -26,12 +26,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up PowerShell ${{ matrix.powershell-version }}
-        uses: PowerShell/setup-powershell@v2
+        uses: actions/setup-pwsh@v2
         with:
-          powershell-version: ${{ matrix.powershell-version }}
+          pwsh-version: ${{ matrix.powershell-version }}
       
       - name: Install Pester module
         shell: pwsh
@@ -68,12 +68,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up PowerShell
-        uses: PowerShell/setup-powershell@v2
+        uses: actions/setup-pwsh@v2
         with:
-          powershell-version: latest
+          pwsh-version: latest
       
       - name: Install PSScriptAnalyzer
         shell: pwsh
@@ -121,12 +121,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up PowerShell
-        uses: PowerShell/setup-powershell@v2
+        uses: actions/setup-pwsh@v2
         with:
-          powershell-version: latest
+          pwsh-version: latest
       
       - name: Check for Hardcoded Credentials
         shell: pwsh
@@ -163,12 +163,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up PowerShell
-        uses: PowerShell/setup-powershell@v2
+        uses: actions/setup-pwsh@v2
         with:
-          powershell-version: latest
+          pwsh-version: latest
       
       - name: Build Modules
         shell: pwsh
@@ -204,7 +204,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Check Module Documentation
         shell: pwsh
