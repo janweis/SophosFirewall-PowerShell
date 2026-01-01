@@ -19,15 +19,26 @@
 #>
 
 BeforeAll {
-    # Import the module
-    Import-Module -Name "$PSScriptRoot\SYSTEM\SophosFirewall.Core\SophosFirewall.Core.psd1" -Force
+    # Import the module - adjust path for both local and CI environments
+    $modulePath = if (Test-Path "$PSScriptRoot\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1") {
+        "$PSScriptRoot\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1"
+    } else {
+        "$PSScriptRoot\..\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1"
+    }
+    
+    Import-Module -Name $modulePath -Force -ErrorAction Stop
 }
 
 Describe 'SophosFirewall.Core Module' {
     
     Context 'Module Loading' {
         It 'Module should load without errors' {
-            { Import-Module -Name "$PSScriptRoot\SYSTEM\SophosFirewall.Core\SophosFirewall.Core.psd1" -Force -ErrorAction Stop } | Should -Not -Throw
+            $modulePath = if (Test-Path "$PSScriptRoot\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1") {
+                "$PSScriptRoot\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1"
+            } else {
+                "$PSScriptRoot\..\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1"
+            }
+            { Import-Module -Name $modulePath -Force -ErrorAction Stop } | Should -Not -Throw
         }
         
         It 'Should export required functions' {

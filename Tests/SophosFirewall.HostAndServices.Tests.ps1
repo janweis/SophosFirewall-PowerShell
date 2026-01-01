@@ -19,10 +19,54 @@
 #>
 
 # Module path setup
-$ModulePath = Join-Path -Path $PSScriptRoot -ChildPath 'SophosFirewall.HostAndServices.psm1'
+$ModulePath = if (Test-Path "$PSScriptRoot\..\Modules\SophosFirewall.HostAndServices\SophosFirewall.HostAndServices.psd1") {
+    "$PSScriptRoot\..\Modules\SophosFirewall.HostAndServices\SophosFirewall.HostAndServices.psd1"
+} else {
+    "$PSScriptRoot\..\..\Modules\SophosFirewall.HostAndServices\SophosFirewall.HostAndServices.psd1"
+}
+
+if (-not (Test-Path $ModulePath)) {
+    Write-Error "Module not found at: $ModulePath"
+    exit 1
+}
+
+# Import Core module first (required dependency)
+$CoreModulePath = if (Test-Path "$PSScriptRoot\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1") {
+    "$PSScriptRoot\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1"
+} else {
+    "$PSScriptRoot\..\..\Modules\SophosFirewall.Core\SophosFirewall.Core.psd1"
+}
+
+Import-Module $CoreModulePath -Force -ErrorAction Stop
 Import-Module $ModulePath -Force
 
 # Mock helper functions for firewall connection
+# ============================================
+# CONSISTENT MOCKING STRATEGY:
+#
+# 1. INVOKE-SFOSAPI Mocking:
+#    - Always mock Invoke-SfosApi to control API responses
+#    - Return realistic XML responses with status codes
+#    - For success: Status code 200 or 202
+#    - For errors: Status code 400, 500, 502, etc.
+#
+# 2. ASSERT-SFOSAPIRETURNSUCCESSS (NOT mocked):
+#    - This Core module function is NOT mocked
+#    - It naturally throws exceptions based on status codes
+#    - Tests verify that errors are properly detected and thrown
+#    - This ensures real error handling logic is tested
+#
+# 3. WHATIF/CONFIRM PARAMETERS:
+#    - WhatIf: Should NOT call Invoke-SfosApi (verify Times=0)
+#    - Confirm: Should exist on write operations (-confirm parameter)
+#    - Use -Confirm:$false to bypass confirmation in tests
+#
+# 4. ERROR SCENARIOS:
+#    - Mock Invoke-SfosApi with error status codes
+#    - Expect { } | Should -Throw to verify exceptions
+#    - Use -ErrorAction Stop to force immediate throws
+# ============================================
+
 function New-MockApiResponse {
     param(
         [string]$ObjectType,
@@ -75,6 +119,8 @@ function New-MockApiErrorResponse {
 }
 
 Describe 'IP Host CRUD Operations' {
+    # Consistent mocking strategy: Mock Invoke-SfosApi, Assert-SfosApiReturnSuccess is NOT mocked (uses real logic)
+    
     Context 'Get-SfosIpHost' {
         BeforeEach {
             Mock -CommandName 'Invoke-SfosApi' -MockWith {
@@ -118,9 +164,9 @@ Describe 'IP Host CRUD Operations' {
             }
             
             $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
-            $result = New-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -Name 'TestHost' -IpAddress '10.0.0.1' -WhatIf
+            $result = New-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -Name 'TestHost' -IPAddress '10.0.0.1' -HostType IP
             
-            Assert-MockCalled -CommandName 'Invoke-SfosApi' -Times 0  # WhatIf should not call API
+            Assert-MockCalled -CommandName 'Invoke-SfosApi' -Times 1
         }
         
         It 'Should create network/subnet host' {
@@ -133,8 +179,18 @@ Describe 'IP Host CRUD Operations' {
             (Get-Command New-SfosIpHost).ParameterSets.Name | Should -Contain 'IP'
         }
         
-        It 'Should support -WhatIf parameter' {
-            (Get-Command New-SfosIpHost).Parameters.Keys | Should -Contain 'WhatIf'
+        It 'Should support -WhatIf parameter - not execute API call' {
+            Mock -CommandName 'Invoke-SfosApi'
+            
+            $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
+            # WhatIf should NOT call the API
+            $result = New-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -Name 'WhatIfHost' -IPAddress '10.0.0.1' -HostType IP -WhatIf
+            
+            Assert-MockCalled -CommandName 'Invoke-SfosApi' -Times 0
+        }
+        
+        It 'Should support -Confirm parameter' {
+            (Get-Command New-SfosIpHost).Parameters.Keys | Should -Contain 'Confirm'
         }
     }
     
@@ -159,8 +215,19 @@ Describe 'IP Host CRUD Operations' {
             $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
             $result = Remove-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -Name 'HostToDelete' -Confirm:$false
             Assert-MockCalled -CommandName 'Invoke-SfosApi' -Times 1
+        }        
+        It 'Should support -Confirm parameter' {
+            (Get-Command Remove-SfosIpHost).Parameters.Keys | Should -Contain 'Confirm'
         }
         
+        It 'Should support -WhatIf parameter - not execute API call' {
+            Mock -CommandName 'Invoke-SfosApi'
+            
+            $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
+            $result = Remove-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -Name 'HostToDelete' -Confirm:$false -WhatIf
+            
+            Assert-MockCalled -CommandName 'Invoke-SfosApi' -Times 0
+        }        
         It 'Should support -Confirm parameter' {
             (Get-Command Remove-SfosIpHost).Parameters.Keys | Should -Contain 'Confirm'
         }
@@ -466,43 +533,78 @@ Describe 'Export/Import Operations' {
 }
 
 Describe 'Error Handling' {
-    Context 'API Errors' {
+    Context 'API Errors - Consistent Mocking Strategy' {
+        # Strategy: Mock Invoke-SfosApi to return error response
+        # Assert-SfosApiReturnSuccess (from Core module) will naturally throw based on status code
+        
         It 'Should handle 502 authentication error' {
             Mock -CommandName 'Invoke-SfosApi' -MockWith {
-                return New-MockApiErrorResponse -StatusCode 502 -ErrorMessage 'Authentication failed'
-            }
-            
-            Mock -CommandName 'Assert-SfosApiReturnSuccess' -MockWith {
-                throw "API returned status 502: Authentication failed"
+                # Return error response that will cause Assert-SfosApiReturnSuccess to throw
+                return @{
+                    StatusCode = 502
+                    Content = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Status code="502">Authentication failed</Status>
+</Response>
+'@
+                }
             }
             
             $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
-            { Get-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck } | Should -Throw
+            # The function should throw because Assert-SfosApiReturnSuccess detects 502
+            { Get-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -ErrorAction Stop } | Should -Throw
         }
         
         It 'Should handle 500 server error' {
             Mock -CommandName 'Invoke-SfosApi' -MockWith {
-                return New-MockApiErrorResponse -StatusCode 500 -ErrorMessage 'Internal Server Error'
-            }
-            
-            Mock -CommandName 'Assert-SfosApiReturnSuccess' -MockWith {
-                throw "API returned status 500"
+                return @{
+                    StatusCode = 500
+                    Content = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Status code="500">Internal Server Error</Status>
+</Response>
+'@
+                }
             }
             
             $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
-            { Get-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck } | Should -Throw
+            { Get-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -ErrorAction Stop } | Should -Throw
+        }
+        
+        It 'Should handle 400 bad request error' {
+            Mock -CommandName 'Invoke-SfosApi' -MockWith {
+                return @{
+                    StatusCode = 400
+                    Content = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Status code="400">Bad Request - Invalid parameters</Status>
+</Response>
+'@
+                }
+            }
+            
+            $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
+            { Get-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -ErrorAction Stop } | Should -Throw
         }
     }
     
     Context 'Parameter Validation' {
         It 'Should require Name parameter for New-SfosIpHost' {
             $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
-            { New-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -IpAddress '10.0.0.1' } | Should -Throw
+            { New-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -IPAddress '10.0.0.1' -HostType IP -ErrorAction Stop } | Should -Throw
         }
         
-        It 'Should require IpAddress for IP-type New-SfosIpHost' {
+        It 'Should require IPAddress for IP-type New-SfosIpHost' {
             $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
-            { New-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -Name 'TestHost' } | Should -Throw
+            { New-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -Name 'TestHost' -HostType IP -ErrorAction Stop } | Should -Throw
+        }
+        
+        It 'Should validate Name is not empty' {
+            $cred = New-Object PSCredential 'admin', (ConvertTo-SecureString 'pass' -AsPlainText -Force)
+            { New-SfosIpHost -Firewall '192.168.1.1' -Port 4444 -Credential $cred -SkipCertificateCheck -Name '' -IPAddress '10.0.0.1' -HostType IP -ErrorAction Stop } | Should -Throw
         }
     }
     
