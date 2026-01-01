@@ -150,8 +150,7 @@
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Get-SfosIpHost 
-{
+function Get-SfosIpHost {
     [CmdletBinding()]
     param(
         # Functional parameters
@@ -185,27 +184,23 @@ function Get-SfosIpHost
 
     # Build server-side filter criteria
     $filterXml = ''
-    if($NameLike) 
-    {
+    if ($NameLike) {
         $nameLikeEsc = ConvertTo-SfosXmlEscaped -Text $NameLike
         $filterXml = ('<key name="Name" criteria="like">{0}</key>' -f $nameLikeEsc)
     }
     
-    if($DescriptionLike) 
-    {
+    if ($DescriptionLike) {
         $descLikeEsc = ConvertTo-SfosXmlEscaped -Text $DescriptionLike
         $filterXml += ('<key name="Description" criteria="like">{0}</key>' -f $descLikeEsc)
     }
 
-    if($IPAddressLike) 
-    {
+    if ($IPAddressLike) {
         $ipLikeEsc = ConvertTo-SfosXmlEscaped -Text $IPAddressLike
         $filterXml += ('<key name="IPAddress" criteria="like">{0}</key>' -f $ipLikeEsc)
     }
     
     $xmlFilterAdvanced = ''
-    if($filterXml)
-    {
+    if ($filterXml) {
         $xmlFilterAdvanced = @"
 <Filter>
     $filterXml
@@ -214,20 +209,17 @@ function Get-SfosIpHost
     }
 
     # Client-side filter for subnet/host type (API supports exact match only)
-    if($SubnetLike -or $HostTypeLike) 
-    {
+    if ($SubnetLike -or $HostTypeLike) {
         $ipHostList = Get-SfosIpHost
 
         $filteredList = @()
-        if($SubnetLike) 
-        {
+        if ($SubnetLike) {
             $filteredList += $ipHostList | Where-Object -FilterScript {
                 $_.Subnet -like $SubnetLike
             }
         }
 
-        if($HostTypeLike) 
-        {
+        if ($HostTypeLike) {
             $filteredList += $ipHostList | Where-Object -FilterScript {
                 $_.HostType -eq $HostTypeLike
             }
@@ -247,16 +239,14 @@ function Get-SfosIpHost
 </Get>
 "@
     # Execute API call
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Failed to retrieve IPHost objects: $($_.Exception.Message)"
     }
     $XmlResponse = [xml]($response.Content)
@@ -267,17 +257,14 @@ function Get-SfosIpHost
     }
 
     # Return raw nodes when -AsXml is used
-    if ($AsXml) 
-    {
+    if ($AsXml) {
         return @($nodes)
     }
 
     # Build PSObjects
     $ipHostObjects = @()
-    foreach ($node in $nodes) 
-    {
-        if(-not $node) 
-        {
+    foreach ($node in $nodes) {
+        if (-not $node) {
             continue
         }
 
@@ -290,12 +277,10 @@ function Get-SfosIpHost
             Description    = $node.Description
             StartIPAddress = $node.StartIPAddress
             EndIPAddress   = $node.EndIPAddress
-            HostGroupList  = if ($node.HostGroupList -and $node.HostGroupList.HostGroup) 
-            {
+            HostGroupList  = if ($node.HostGroupList -and $node.HostGroupList.HostGroup) {
                 @($node.HostGroupList.HostGroup)
             }
-            else 
-            {
+            else {
                 @()
             }
         }
@@ -403,8 +388,7 @@ function Get-SfosIpHost
         .LINK
         Remove-SfosIpHost
 #>
-function New-SfosIpHost 
-{
+function New-SfosIpHost {
     [CmdletBinding(DefaultParameterSetName = 'IP')]
     param(
         [Parameter(Mandatory)]
@@ -423,7 +407,7 @@ function New-SfosIpHost
         [Parameter(Mandatory, ParameterSetName = 'IPRange')]
         [Parameter(Mandatory, ParameterSetName = 'IPList')]
         [Parameter(Mandatory)]
-        [ValidateSet('IP','Network','IPRange','IPList')]
+        [ValidateSet('IP', 'Network', 'IPRange', 'IPList')]
         [string]$HostType,
 
         # --- IP ---
@@ -462,33 +446,26 @@ function New-SfosIpHost
 
     # Setup Description XML
     $xmlDescription = ''
-    if ($Description) 
-    {
+    if ($Description) {
         $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
         $xmlDescription = "<Description>$descEsc</Description>"
     }
     
     # Setup HostGroup XML
     $xmlHostGroupList = ''
-    if ($HostGroupList) 
-    {
+    if ($HostGroupList) {
         $hostGroupXml = ''
-        foreach ($hostGroupItem in $HostGroupList) 
-        {
-            if (-not $hostGroupItem) 
-            {
+        foreach ($hostGroupItem in $HostGroupList) {
+            if (-not $hostGroupItem) {
                 continue
             }
-            if ($hostGroupItem.Length -gt 50) 
-            {
+            if ($hostGroupItem.Length -gt 50) {
                 throw "HostGroup entry '$hostGroupItem' must be at most 50 characters."
             }
-            if ($hostGroupItem -match '^[#,]') 
-            {
+            if ($hostGroupItem -match '^[#,]') {
                 throw "HostGroup entry '$hostGroupItem' must not start with '#' or ','."
             }
-            if ($hostGroupItem -match ',') 
-            {
+            if ($hostGroupItem -match ',') {
                 throw "HostGroup entry '$hostGroupItem' must not contain a comma."
             }
             $hgEsc = ConvertTo-SfosXmlEscaped -Text $hostGroupItem
@@ -506,25 +483,21 @@ function New-SfosIpHost
     # Build Data IP/Network/IPRange/IPList Data XML
     $xmlIpHost = @()
     switch ($PSCmdlet.ParameterSetName) {
-        'IP' 
-        {
+        'IP' {
             $xmlIpHost += "<IPAddress>$($IPAddress.IPAddressToString)</IPAddress>"
         }
-        'Network' 
-        {
+        'Network' {
             $xmlIpHost += "<IPAddress>$($IPAddress.IPAddressToString)</IPAddress>"
             $xmlIpHost += "<Subnet>$Subnet</Subnet>"
         }
-        'IPRange' 
-        {
+        'IPRange' {
             $xmlIpHost += "<StartIPAddress>$($StartIPAddress.IPAddressToString)</StartIPAddress>"
             $xmlIpHost += "<EndIPAddress>$($EndIPAddress.IPAddressToString)</EndIPAddress>"
         }
-        'IPList' 
-        {
+        'IPList' {
             $joinedIPs = ($ListOfIPAddresses | ForEach-Object -Process {
                     $_.IPAddressToString
-            }) -join ','
+                }) -join ','
             $xmlIpHost = "<ListOfIPAddresses>$joinedIPs</ListOfIPAddresses>"
         }
     }
@@ -544,16 +517,14 @@ function New-SfosIpHost
 "@
 
     # Send API command
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Failed to update IPHost object '$Name': $($_.Exception.Message)"
     }
 
@@ -633,11 +604,10 @@ function New-SfosIpHost
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Set-SfosIpHost 
-{
+function Set-SfosIpHost {
     [CmdletBinding(DefaultParameterSetName = 'IP')]
     param(
-        [Parameter(Mandatory, ValueFromPipeline,ValueFromPipelineByPropertyName)]
+        [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
         [ValidateLength(1, 50)]
         [ValidatePattern('^[^,]+$')]
         [string]$Name,
@@ -656,7 +626,7 @@ function Set-SfosIpHost
         [Parameter(Mandatory, ParameterSetName = 'IPRange')]
         [Parameter(Mandatory, ParameterSetName = 'IPList')]
         [Parameter(Mandatory)]
-        [ValidateSet('IP','Network','IPRange','IPList')]
+        [ValidateSet('IP', 'Network', 'IPRange', 'IPList')]
         [string]$HostType,
 
         # --- IP ---
@@ -701,33 +671,26 @@ function Set-SfosIpHost
 
     # Setup Description XML
     $xmlDescription = ''
-    if ($Description) 
-    {
+    if ($Description) {
         $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
         $xmlDescription = "<Description>$descEsc</Description>"
     }
     
     # Setup HostGroup XML
     $xmlHostGroupList = ''
-    if ($HostGroupList) 
-    {
+    if ($HostGroupList) {
         $hostGroupXml = ''
-        foreach ($hostGroupItem in $HostGroupList) 
-        {
-            if (-not $hostGroupItem) 
-            {
+        foreach ($hostGroupItem in $HostGroupList) {
+            if (-not $hostGroupItem) {
                 continue
             }
-            if ($hostGroupItem.Length -gt 50) 
-            {
+            if ($hostGroupItem.Length -gt 50) {
                 throw "HostGroup entry '$hostGroupItem' must be at most 50 characters."
             }
-            if ($hostGroupItem -match '^[#,]') 
-            {
+            if ($hostGroupItem -match '^[#,]') {
                 throw "HostGroup entry '$hostGroupItem' must not start with '#' or ','."
             }
-            if ($hostGroupItem -match ',') 
-            {
+            if ($hostGroupItem -match ',') {
                 throw "HostGroup entry '$hostGroupItem' must not contain a comma."
             }
             $hgEsc = ConvertTo-SfosXmlEscaped -Text $hostGroupItem
@@ -745,25 +708,21 @@ function Set-SfosIpHost
     # Build Data IP/Network/IPRange/IPList Data XML
     $xmlIpHost = ''
     switch ($PSCmdlet.ParameterSetName) {
-        'IP' 
-        {
+        'IP' {
             $xmlIpHost += "<IPAddress>$($IPAddress.IPAddressToString)</IPAddress>"
         }
-        'Network' 
-        {
+        'Network' {
             $xmlIpHost += "<IPAddress>$($IPAddress.IPAddressToString)</IPAddress>"
             $xmlIpHost += "<Subnet>$Subnet</Subnet>"
         }
-        'IPRange' 
-        {
+        'IPRange' {
             $xmlIpHost += "<StartIPAddress>$($StartIPAddress.IPAddressToString)</StartIPAddress>"
             $xmlIpHost += "<EndIPAddress>$($EndIPAddress.IPAddressToString)</EndIPAddress>"
         }
-        'IPList' 
-        {
+        'IPList' {
             $joinedIPs = ($ListOfIPAddresses | ForEach-Object -Process {
                     $_.IPAddressToString
-            }) -join ','
+                }) -join ','
             $xmlIpHost = "<ListOfIPAddresses>$joinedIPs</ListOfIPAddresses>"
         }
     }
@@ -783,16 +742,14 @@ function Set-SfosIpHost
 "@
 
     # Send API command
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Failed to create IPHost object '$Name': $($_.Exception.Message)"
     }
 
@@ -845,8 +802,7 @@ function Set-SfosIpHost
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosIpHost 
-{
+function Remove-SfosIpHost {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -867,8 +823,7 @@ function Remove-SfosIpHost
     }
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("IPHost '$Name' on $($params.Firewall)", 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess("IPHost '$Name' on $($params.Firewall)", 'Remove')) {
             return
         }
 
@@ -882,16 +837,14 @@ function Remove-SfosIpHost
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error removing IPHost object '': $($_.Exception.Message)"
         }
 
@@ -1060,12 +1013,12 @@ function Import-SfosIpHosts {
             continue
         }
 
-        if($ipHost.HostType -notin @('IP','Network','IPRange','IPList')) {
+        if ($ipHost.HostType -notin @('IP', 'Network', 'IPRange', 'IPList')) {
             Write-Information "Skipping entry with invalid HostType '$($ipHost.HostType)': $($ipHost.Name)" -InformationAction Continue
             continue
         }
 
-        switch($ipHost.HostType) {
+        switch ($ipHost.HostType) {
             'IP' {
                 if (-not $ipHost.IPAddress) {
                     Write-Information "Skipping IP host without IPAddress: $($ipHost.Name)" -InformationAction Continue
@@ -1187,8 +1140,7 @@ function Import-SfosIpHosts {
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Get-SfosIpHostGroup 
-{
+function Get-SfosIpHostGroup {
     [CmdletBinding()]
     param(
         # Functional parameters
@@ -1209,14 +1161,12 @@ function Get-SfosIpHostGroup
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
 
     $filterXml = ''
-    if ($NameLike) 
-    {
+    if ($NameLike) {
         $nameLikeEsc = ConvertTo-SfosXmlEscaped -Text $NameLike
         $filterXml = ('<Filter><key name="Name" criteria="like">{0}</key></Filter>' -f $nameLikeEsc)
     }
 
-    if ($DescriptionLike) 
-    {
+    if ($DescriptionLike) {
         $descLikeEsc = ConvertTo-SfosXmlEscaped -Text $DescriptionLike
         $filterXml += ('<Filter><key name="Description" criteria="like">{0}</key></Filter>' -f $descLikeEsc)
     }
@@ -1229,16 +1179,14 @@ function Get-SfosIpHostGroup
 </Get>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error retrieving IPHostGroup objects: $($_.Exception.Message)"
     }
 
@@ -1249,15 +1197,13 @@ function Get-SfosIpHostGroup
         $_.Node
     }
 
-    if ($AsXml) 
-    {
+    if ($AsXml) {
         return @($nodes)
     }
 
     # Erstelle PSCustomObjects
     $ipHostGroupObjects = @()
-    foreach ($node in $nodes) 
-    {
+    foreach ($node in $nodes) {
         $ipHostGroupObjects += [PSCustomObject]@{
             Name        = $node.Name
             Description = $node.Description
@@ -1334,8 +1280,7 @@ function Get-SfosIpHostGroup
         .LINK
         Add-SfosIpHostGroupMember
 #>
-function New-SfosIpHostGroup 
-{
+function New-SfosIpHostGroup {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -1343,7 +1288,7 @@ function New-SfosIpHostGroup
         [ValidatePattern('^[^,]+$')]
         [string]$Name,
 
-        [ValidateSet('IPv4','IPv6')]
+        [ValidateSet('IPv4', 'IPv6')]
         [string]$IPFamily = 'IPv4',
 
         [string[]]$members,
@@ -1362,24 +1307,19 @@ function New-SfosIpHostGroup
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
     $nameEsc = ConvertTo-SfosXmlEscaped -Text $Name
 
-    if ($Description) 
-    {
+    if ($Description) {
         $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
     }
 
     $xmlMember = ''
-    foreach ($member in $members) 
-    {
-        if (-not $member) 
-        {
+    foreach ($member in $members) {
+        if (-not $member) {
             continue
         }
-        if ($member.Length -gt 50) 
-        {
+        if ($member.Length -gt 50) {
             throw "Member '' must be 50 characters or fewer."
         }
-        if ($member -match ',') 
-        {
+        if ($member -match ',') {
             throw "Member '' cannot contain a comma."
         }
         $mEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -1399,16 +1339,14 @@ function New-SfosIpHostGroup
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error creating IPHostGroup object '': $($_.Exception.Message)"
     }
 
@@ -1467,8 +1405,7 @@ function New-SfosIpHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Set-SfosIpHostGroup 
-{
+function Set-SfosIpHostGroup {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -1476,7 +1413,7 @@ function Set-SfosIpHostGroup
         [ValidatePattern('^[^,]+$')]
         [string]$Name,
         
-        [ValidateSet('IPv4','IPv6')]
+        [ValidateSet('IPv4', 'IPv6')]
         [string]$IPFamily = 'IPv4',
         
         [Parameter(ValueFromPipelineByPropertyName)]
@@ -1501,24 +1438,19 @@ function Set-SfosIpHostGroup
     process {
         $nameEsc = ConvertTo-SfosXmlEscaped -Text $Name
 
-        if ($Description) 
-        {
+        if ($Description) {
             $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
         }
 
         $xmlMember = ''
-        foreach ($member in $members) 
-        {
-            if (-not $member) 
-            {
+        foreach ($member in $members) {
+            if (-not $member) {
                 continue
             }
-            if ($member.Length -gt 50) 
-            {
+            if ($member.Length -gt 50) {
                 throw "Member '' must be 50 characters or fewer."
             }
-            if ($member -match ',') 
-            {
+            if ($member -match ',') {
                 throw "Member '' cannot contain a comma."
             }
             $mEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -1538,16 +1470,14 @@ function Set-SfosIpHostGroup
 </Set>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error updating IPHostGroup object '': $($_.Exception.Message)"
         }
 
@@ -1603,8 +1533,7 @@ function Set-SfosIpHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosIpHostGroup 
-{
+function Remove-SfosIpHostGroup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -1625,8 +1554,7 @@ function Remove-SfosIpHostGroup
     }
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("IPHostGroup '$Name' on $($params.Firewall)", 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess("IPHostGroup '$Name' on $($params.Firewall)", 'Remove')) {
             return
         }
 
@@ -1640,16 +1568,14 @@ function Remove-SfosIpHostGroup
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error removing IPHostGroup object '': $($_.Exception.Message)"
         }
 
@@ -1704,8 +1630,7 @@ function Remove-SfosIpHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Add-SfosIpHostGroupMember 
-{
+function Add-SfosIpHostGroupMember {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -1736,14 +1661,13 @@ function Add-SfosIpHostGroupMember
 
         # Retrieve existing object
         $ipHostGroup = Get-SfosIpHostGroup -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -NameLike $Name `
-        -SkipCertificateCheck:$params.SkipCertificateCheck
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -NameLike $Name `
+            -SkipCertificateCheck:$params.SkipCertificateCheck
 
-        if ($null -eq $ipHostGroup) 
-        {
+        if ($null -eq $ipHostGroup) {
             throw "The IPHostGroup object '$Name' was not found."
         }
         
@@ -1755,18 +1679,14 @@ function Add-SfosIpHostGroupMember
 
         # Build XML member list
         $xmlMember = ''
-        foreach ($member in $ipHostGroupMembers) 
-        {
-            if (-not $member) 
-            {
+        foreach ($member in $ipHostGroupMembers) {
+            if (-not $member) {
                 continue
             }
-            if ($member.Length -gt 50) 
-            {
+            if ($member.Length -gt 50) {
                 throw "Member '' must be 50 characters or fewer."
             }
-            if ($member -match ',') 
-            {
+            if ($member -match ',') {
                 throw "Member '' cannot contain a comma."
             }
             $memberEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -1784,16 +1704,14 @@ function Add-SfosIpHostGroupMember
 </Set>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error adding members to IPHostGroup '': $($_.Exception.Message)"
         }
 
@@ -1846,8 +1764,7 @@ function Add-SfosIpHostGroupMember
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosIpHostGroupMember 
-{
+function Remove-SfosIpHostGroupMember {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -1877,19 +1794,17 @@ function Remove-SfosIpHostGroupMember
 
         # Retrieve existing object
         $ipHostGroup = Get-SfosIpHostGroup -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -NameLike $Name `
-        -SkipCertificateCheck:$params.SkipCertificateCheck
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -NameLike $Name `
+            -SkipCertificateCheck:$params.SkipCertificateCheck
 
-        if ($null -eq $ipHostGroup) 
-        {
+        if ($null -eq $ipHostGroup) {
             throw "The IPHostGroup object '$Name' was not found."
         }
         
-        if($ipHostGroup.Members.Count -eq 0)
-        {
+        if ($ipHostGroup.Members.Count -eq 0) {
             # Es kann nichts entfernt werden...
             return $null
         }
@@ -1899,29 +1814,23 @@ function Remove-SfosIpHostGroupMember
         $ipHostGroupMembers = [Collections.ArrayList]@()
         $ipHostGroupMembers.AddRange($ipHostGroup.Members)
         
-        foreach($member in $members) 
-        {
+        foreach ($member in $members) {
             [int]$indexMember = $ipHostGroupMembers.IndexOf($member)
             
-            if($indexMember -ne -1)
-            {
+            if ($indexMember -ne -1) {
                 $ipHostGroupMembers.RemoveAt($indexMember)
             }
         }
 
         $xmlMember = ''
-        foreach ($member in $ipHostGroupMembers) 
-        {
-            if (-not $member) 
-            {
+        foreach ($member in $ipHostGroupMembers) {
+            if (-not $member) {
                 continue
             }
-            if ($member.Length -gt 50) 
-            {
+            if ($member.Length -gt 50) {
                 throw "Member '' must be 50 characters or fewer."
             }
-            if ($member -match ',') 
-            {
+            if ($member -match ',') {
                 throw "Member '' cannot contain a comma."
             }
             $memberEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -1939,16 +1848,14 @@ function Remove-SfosIpHostGroupMember
 </Set>
 "@
         # Send Request to the API
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error removing members from IPHostGroup '': $($_.Exception.Message)"
         }
 
@@ -2092,13 +1999,13 @@ function Export-SfosIpHostGroups {
 
         # Return summary object
         return [PSCustomObject]@{
-            Operation     = 'Export'
-            ObjectType    = 'IPHostGroup'
-            Total         = $ipHostGroups.Count
-            Success       = $ipHostGroups.Count
-            Failed        = 0
-            SuccessItems  = @($ipHostGroups.Name)
-            FailedItems   = @()
+            Operation    = 'Export'
+            ObjectType   = 'IPHostGroup'
+            Total        = $ipHostGroups.Count
+            Success      = $ipHostGroups.Count
+            Failed       = 0
+            SuccessItems = @($ipHostGroups.Name)
+            FailedItems  = @()
         }
     }
     catch {
@@ -2252,13 +2159,13 @@ function Import-SfosIpHostGroups {
 
     # Return summary object
     return [PSCustomObject]@{
-        Operation     = 'Import'
-        ObjectType    = 'IPHostGroup'
-        Total         = $ipHostGroups.Count
-        Success       = $successItems.Count
-        Failed        = $failedItems.Count
-        SuccessItems  = $successItems
-        FailedItems   = $failedItems
+        Operation    = 'Import'
+        ObjectType   = 'IPHostGroup'
+        Total        = $ipHostGroups.Count
+        Success      = $successItems.Count
+        Failed       = $failedItems.Count
+        SuccessItems = $successItems
+        FailedItems  = $failedItems
     }
 }
 
@@ -2318,8 +2225,7 @@ function Import-SfosIpHostGroups {
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Get-SfosFqdnHost 
-{
+function Get-SfosFqdnHost {
     [CmdletBinding()]
     param(
         # Functional parameters
@@ -2342,20 +2248,17 @@ function Get-SfosFqdnHost
 
     # Filter in deinem funktionierenden Format
     $filterXml = ''
-    if ($NameLike) 
-    {
+    if ($NameLike) {
         $nameLikeEsc = ConvertTo-SfosXmlEscaped -Text $NameLike
         $filterXml += ('<Filter><key name="Name" criteria="like">{0}</key></Filter>' -f $nameLikeEsc)
     }
 
-    if ($FqdnLike) 
-    {
+    if ($FqdnLike) {
         $fqdnLikeEsc = ConvertTo-SfosXmlEscaped -Text $FqdnLike
         $filterXml += ('<Filter><key name="FQDN" criteria="like">{0}</key></Filter>' -f $fqdnLikeEsc)
     }
 
-    if ($DescriptionLike) 
-    {
+    if ($DescriptionLike) {
         $descriptionLikeEsc = ConvertTo-SfosXmlEscaped -Text $DescriptionLike
         $filterXml += ('<Filter><key name="Description" criteria="like">{0}</key></Filter>' -f $descriptionLikeEsc)
     }
@@ -2368,18 +2271,16 @@ function Get-SfosFqdnHost
 </Get>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi `
-        -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner `
-        -SkipCertificateCheck:$params.SkipCertificateCheck
+            -Firewall $params.Firewall `
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner `
+            -SkipCertificateCheck:$params.SkipCertificateCheck
     }
-    catch 
-    {
+    catch {
         throw "Error retrieving FQDN host objects: $($_.Exception.Message)"
     }
 
@@ -2390,15 +2291,13 @@ function Get-SfosFqdnHost
         $_.Node
     }
 
-    if ($AsXml) 
-    {
+    if ($AsXml) {
         return @($nodes)
     }
 
     # Erstelle PSCustomObjects
     $fqdnHostObjects = @()
-    foreach ($node in $nodes) 
-    {
+    foreach ($node in $nodes) {
         $fqdnHostObjects += [PSCustomObject]@{
             Name              = $node.Name
             Description       = $node.Description
@@ -2484,8 +2383,7 @@ function Get-SfosFqdnHost
         .LINK
         Remove-SfosFqdnHost
 #>
-function New-SfosFqdnHost 
-{
+function New-SfosFqdnHost {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -2517,28 +2415,22 @@ function New-SfosFqdnHost
 
     # Setup Description XML
     $xmlDescription = ''
-    if ($Description) 
-    {
+    if ($Description) {
         $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
         $xmlDescription = "<Description>$descEsc</Description>"
     }
 
     $xmlHostGroupList = ''
-    if ($HostGroup) 
-    {
+    if ($HostGroup) {
         $hostGroupXml = ''
-        foreach ($hostGroupItem in $HostGroup) 
-        {
-            if (-not $hostGroupItem) 
-            {
+        foreach ($hostGroupItem in $HostGroup) {
+            if (-not $hostGroupItem) {
                 continue
             }
-            if ($hostGroupItem.Length -gt 50) 
-            {
+            if ($hostGroupItem.Length -gt 50) {
                 throw "HostGroup '$hostGroupItem' darf max. 50 Zeichen lang sein."
             }
-            if ($hostGroupItem -match ',') 
-            {
+            if ($hostGroupItem -match ',') {
                 throw "HostGroup '$hostGroupItem' darf kein Komma enthalten."
             }
             $hgEsc = ConvertTo-SfosXmlEscaped -Text $hostGroupItem
@@ -2563,16 +2455,14 @@ function New-SfosFqdnHost
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error creating FQDNHost object '': $($_.Exception.Message)"
     }
 
@@ -2634,8 +2524,7 @@ function New-SfosFqdnHost
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Set-SfosFqdnHost 
-{
+function Set-SfosFqdnHost {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -2672,29 +2561,23 @@ function Set-SfosFqdnHost
 
         # Setup Description XML
         $xmlDescription = ''
-        if ($Description) 
-        {
+        if ($Description) {
             $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
             $xmlDescription = "<Description>$descEsc</Description>"
         }
 
         # Setup HostGroup XML
         $xmlHostGroupList = ''
-        if ($HostGroup) 
-        {
+        if ($HostGroup) {
             $hostGroupXml = ''
-            foreach ($hostGroupItem in $HostGroup) 
-            {
-                if (-not $hostGroupItem) 
-                {
+            foreach ($hostGroupItem in $HostGroup) {
+                if (-not $hostGroupItem) {
                     continue
                 }
-                if ($hostGroupItem.Length -gt 50) 
-                {
+                if ($hostGroupItem.Length -gt 50) {
                     throw "HostGroup '$hostGroupItem' darf max. 50 Zeichen lang sein."
                 }
-                if ($hostGroupItem -match ',') 
-                {
+                if ($hostGroupItem -match ',') {
                     throw "HostGroup '$hostGroupItem' darf kein Komma enthalten."
                 }
                 $hgEsc = ConvertTo-SfosXmlEscaped -Text $hostGroupItem
@@ -2721,16 +2604,14 @@ function Set-SfosFqdnHost
 "@
         
         # Send API Request
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error updating FQDNHost object '': $($_.Exception.Message)"
         }
 
@@ -2786,8 +2667,7 @@ function Set-SfosFqdnHost
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosFqdnHost 
-{
+function Remove-SfosFqdnHost {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -2808,8 +2688,7 @@ function Remove-SfosFqdnHost
     }
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("FQDNHost '$Name' on $($params.Firewall)", 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess("FQDNHost '$Name' on $($params.Firewall)", 'Remove')) {
             return
         }
 
@@ -2823,16 +2702,14 @@ function Remove-SfosFqdnHost
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error removing FQDNHost object '': $($_.Exception.Message)"
         }
 
@@ -2846,8 +2723,7 @@ function Remove-SfosFqdnHost
 }
 
 # -- BETA -- Works but needs further testing
-function Remove-SfosFqdnHostMass
-{
+function Remove-SfosFqdnHostMass {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -2867,14 +2743,12 @@ function Remove-SfosFqdnHostMass
 
     process {
         # Respect -WhatIf / -Confirm
-        if (-not $PSCmdlet.ShouldProcess(("FQDNHost(s) '{0}' auf {1}" -f ($Names -join ', '), $params.Firewall), 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess(("FQDNHost(s) '{0}' auf {1}" -f ($Names -join ', '), $params.Firewall), 'Remove')) {
             return
         }
 
         # Build Name XML
-        $xmlNames = foreach($nameItem in $Names) 
-        {
+        $xmlNames = foreach ($nameItem in $Names) {
             $nameEsc = ConvertTo-SfosXmlEscaped -Text $nameItem
             "<Name>$nameEsc</Name>"
         }
@@ -2888,16 +2762,14 @@ function Remove-SfosFqdnHostMass
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error removing multiple FQDNHost objects: $($_.Exception.Message)"
         }
 
@@ -3029,13 +2901,13 @@ function Export-SfosFqdnHosts {
 
         # Return summary object
         return [PSCustomObject]@{
-            Operation     = 'Export'
-            ObjectType    = 'FqdnHost'
-            Total         = $fqdnHosts.Count
-            Success       = $fqdnHosts.Count
-            Failed        = 0
-            SuccessItems  = @($fqdnHosts.Name)
-            FailedItems   = @()
+            Operation    = 'Export'
+            ObjectType   = 'FqdnHost'
+            Total        = $fqdnHosts.Count
+            Success      = $fqdnHosts.Count
+            Failed       = 0
+            SuccessItems = @($fqdnHosts.Name)
+            FailedItems  = @()
         }
     }
     catch {
@@ -3176,13 +3048,13 @@ function Import-SfosFqdnHosts {
 
     # Return summary object
     return [PSCustomObject]@{
-        Operation     = 'Import'
-        ObjectType    = 'FqdnHost'
-        Total         = $fqdnHosts.Count
-        Success       = $successItems.Count
-        Failed        = $failedItems.Count
-        SuccessItems  = $successItems
-        FailedItems   = $failedItems
+        Operation    = 'Import'
+        ObjectType   = 'FqdnHost'
+        Total        = $fqdnHosts.Count
+        Success      = $successItems.Count
+        Failed       = $failedItems.Count
+        SuccessItems = $successItems
+        FailedItems  = $failedItems
     }
 }
 
@@ -3244,8 +3116,7 @@ function Import-SfosFqdnHosts {
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Get-SfosFqdnHostGroup 
-{
+function Get-SfosFqdnHostGroup {
     [CmdletBinding()]
     param(
         # Functional parameters
@@ -3266,14 +3137,12 @@ function Get-SfosFqdnHostGroup
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
 
     $filterXml = ''
-    if ($NameLike) 
-    {
+    if ($NameLike) {
         $nameLikeEsc = ConvertTo-SfosXmlEscaped -Text $NameLike
         $filterXml = ('<Filter><key name="Name" criteria="like">{0}</key></Filter>' -f $nameLikeEsc)
     }
 
-    if ($DescriptionLike) 
-    {
+    if ($DescriptionLike) {
         $descLikeEsc = ConvertTo-SfosXmlEscaped -Text $DescriptionLike
         $filterXml += ('<Filter><key name="Description" criteria="like">{0}</key></Filter>' -f $descLikeEsc)
     }
@@ -3286,16 +3155,14 @@ function Get-SfosFqdnHostGroup
 </Get>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error retrieving FQDNHostGroup objects: $($_.Exception.Message)"
     }
 
@@ -3306,15 +3173,13 @@ function Get-SfosFqdnHostGroup
         $_.Node
     }
 
-    if ($AsXml) 
-    {
+    if ($AsXml) {
         return @($nodes)
     }
 
     # Erstelle PSCustomObjects
     $fqdnHostGroupObjects = @()
-    foreach ($node in $nodes) 
-    {
+    foreach ($node in $nodes) {
         $fqdnHostGroupObjects += [PSCustomObject]@{
             Name         = $node.Name
             Description  = $node.Description
@@ -3370,8 +3235,7 @@ function Get-SfosFqdnHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function New-SfosFqdnHostGroup 
-{
+function New-SfosFqdnHostGroup {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -3395,24 +3259,19 @@ function New-SfosFqdnHostGroup
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
     $nameEsc = ConvertTo-SfosXmlEscaped -Text $Name
 
-    if ($Description) 
-    {
+    if ($Description) {
         $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
     }
 
     $xmlMember = ''
-    foreach ($member in $members) 
-    {
-        if (-not $member) 
-        {
+    foreach ($member in $members) {
+        if (-not $member) {
             continue
         }
-        if ($member.Length -gt 50) 
-        {
+        if ($member.Length -gt 50) {
             throw "Member '' must be 50 characters or fewer."
         }
-        if ($member -match ',') 
-        {
+        if ($member -match ',') {
             throw "Member '' cannot contain a comma."
         }
         $memberEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -3435,16 +3294,14 @@ function New-SfosFqdnHostGroup
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error creating FQDNHostGroup object '': $($_.Exception.Message)"
     }
 
@@ -3503,8 +3360,7 @@ function New-SfosFqdnHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Set-SfosFqdnHostGroup 
-{
+function Set-SfosFqdnHostGroup {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -3535,24 +3391,19 @@ function Set-SfosFqdnHostGroup
     process {
         $nameEsc = ConvertTo-SfosXmlEscaped -Text $Name
 
-        if ($Description) 
-        {
+        if ($Description) {
             $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
         }
 
         $xmlMember = ''
-        foreach ($member in $members) 
-        {
-            if (-not $member) 
-            {
+        foreach ($member in $members) {
+            if (-not $member) {
                 continue
             }
-            if ($member.Length -gt 50) 
-            {
+            if ($member.Length -gt 50) {
                 throw "Member '' must be 50 characters or fewer."
             }
-            if ($member -match ',') 
-            {
+            if ($member -match ',') {
                 throw "Member '' cannot contain a comma."
             }
             $mEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -3575,16 +3426,14 @@ function Set-SfosFqdnHostGroup
 </Set>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error updating FQDNHostGroup object '': $($_.Exception.Message)"
         }
 
@@ -3640,8 +3489,7 @@ function Set-SfosFqdnHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosFqdnHostGroup 
-{
+function Remove-SfosFqdnHostGroup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -3662,8 +3510,7 @@ function Remove-SfosFqdnHostGroup
     }
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("FQDNHostGroup '$Name' on $($params.Firewall)", 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess("FQDNHostGroup '$Name' on $($params.Firewall)", 'Remove')) {
             return
         }
 
@@ -3677,16 +3524,14 @@ function Remove-SfosFqdnHostGroup
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error removing FQDNHostGroup object '': $($_.Exception.Message)"
         }
 
@@ -3699,8 +3544,7 @@ function Remove-SfosFqdnHostGroup
     }
 }
 
-function Add-SfosFqdnHostGroupMember 
-{
+function Add-SfosFqdnHostGroupMember {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -3723,18 +3567,14 @@ function Add-SfosFqdnHostGroupMember
     $nameEsc = ConvertTo-SfosXmlEscaped -Text $Name
 
     $xmlMember = ''
-    foreach ($member in $members) 
-    {
-        if (-not $member) 
-        {
+    foreach ($member in $members) {
+        if (-not $member) {
             continue
         }
-        if ($member.Length -gt 50) 
-        {
+        if ($member.Length -gt 50) {
             throw "Member '' must be 50 characters or fewer."
         }
-        if ($member -match ',') 
-        {
+        if ($member -match ',') {
             throw "Member '' cannot contain a comma."
         }
         $memberEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -3756,16 +3596,14 @@ function Add-SfosFqdnHostGroupMember
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error adding members to FQDNHostGroup '': $($_.Exception.Message)"
     }
 
@@ -3775,8 +3613,7 @@ function Add-SfosFqdnHostGroupMember
     Assert-SfosApiReturnSuccess -Xml $XmlResponse -ObjectName 'FQDNHostGroup' -Action 'add members' -Target $Name
 }
 
-function Remove-SfosFqdnHostGroupMember 
-{
+function Remove-SfosFqdnHostGroupMember {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -3799,18 +3636,14 @@ function Remove-SfosFqdnHostGroupMember
     $nameEsc = ConvertTo-SfosXmlEscaped -Text $Name
 
     $xmlMember = ''
-    foreach ($member in $members) 
-    {
-        if (-not $member) 
-        {
+    foreach ($member in $members) {
+        if (-not $member) {
             continue
         }
-        if ($member.Length -gt 50) 
-        {
+        if ($member.Length -gt 50) {
             throw "Member '' must be 50 characters or fewer."
         }
-        if ($member -match ',') 
-        {
+        if ($member -match ',') {
             throw "Member '' cannot contain a comma."
         }
         $memberEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -3832,16 +3665,14 @@ function Remove-SfosFqdnHostGroupMember
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error removing members from FQDNHostGroup '': $($_.Exception.Message)"
     }
 
@@ -3984,13 +3815,13 @@ function Export-SfosFqdnHostGroups {
 
         # Return summary object
         return [PSCustomObject]@{
-            Operation     = 'Export'
-            ObjectType    = 'FqdnHostGroup'
-            Total         = $fqdnHostGroups.Count
-            Success       = $fqdnHostGroups.Count
-            Failed        = 0
-            SuccessItems  = @($fqdnHostGroups.Name)
-            FailedItems   = @()
+            Operation    = 'Export'
+            ObjectType   = 'FqdnHostGroup'
+            Total        = $fqdnHostGroups.Count
+            Success      = $fqdnHostGroups.Count
+            Failed       = 0
+            SuccessItems = @($fqdnHostGroups.Name)
+            FailedItems  = @()
         }
     }
     catch {
@@ -4144,13 +3975,13 @@ function Import-SfosFqdnHostGroups {
 
     # Return summary object
     return [PSCustomObject]@{
-        Operation     = 'Import'
-        ObjectType    = 'FqdnHostGroup'
-        Total         = $fqdnHostGroups.Count
-        Success       = $successItems.Count
-        Failed        = $failedItems.Count
-        SuccessItems  = $successItems
-        FailedItems   = $failedItems
+        Operation    = 'Import'
+        ObjectType   = 'FqdnHostGroup'
+        Total        = $fqdnHostGroups.Count
+        Success      = $successItems.Count
+        Failed       = $failedItems.Count
+        SuccessItems = $successItems
+        FailedItems  = $failedItems
     }
 }
 
@@ -4210,8 +4041,7 @@ function Import-SfosFqdnHostGroups {
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Get-SfosMacHost 
-{
+function Get-SfosMacHost {
     [CmdletBinding()]
     param(
         # Functional parameters
@@ -4233,20 +4063,17 @@ function Get-SfosMacHost
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
 
     $filterXml = ''
-    if ($NameLike) 
-    {
+    if ($NameLike) {
         $nameLikeEsc = ConvertTo-SfosXmlEscaped -Text $NameLike
         $filterXml = ('<Filter><key name="Name" criteria="like">{0}</key></Filter>' -f $nameLikeEsc)
     }
 
-    if ($MACAddressLike) 
-    {
+    if ($MACAddressLike) {
         $macLikeEsc = ConvertTo-SfosXmlEscaped -Text $MACAddressLike
         $filterXml += ('<Filter><key name="MACAddress" criteria="like">{0}</key></Filter>' -f $macLikeEsc)
     }
 
-    if ($DescriptionLike) 
-    {
+    if ($DescriptionLike) {
         $descLikeEsc = ConvertTo-SfosXmlEscaped -Text $DescriptionLike
         $filterXml += ('<Filter><key name="Description" criteria="like">{0}</key></Filter>' -f $descLikeEsc)
     }
@@ -4259,16 +4086,14 @@ function Get-SfosMacHost
 </Get>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error retrieving MAC host objects: $($_.Exception.Message)"
     }
 
@@ -4279,15 +4104,13 @@ function Get-SfosMacHost
         $_.Node
     }
 
-    if ($AsXml) 
-    {
+    if ($AsXml) {
         return @($nodes)
     }
 
     # Erstelle PSCustomObjects
     $macHostObjects = @()
-    foreach ($node in $nodes) 
-    {
+    foreach ($node in $nodes) {
         $macHostObjects += [PSCustomObject]@{
             Name        = $node.Name
             Type        = $node.Type
@@ -4377,8 +4200,7 @@ function Get-SfosMacHost
         .LINK
         Remove-SfosMacHost
 #>
-function New-SfosMacHost 
-{
+function New-SfosMacHost {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -4407,8 +4229,7 @@ function New-SfosMacHost
 
     # Setup Description XML
     $xmlDescription = ''
-    if ($Description) 
-    {
+    if ($Description) {
         $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
         $xmlDescription = "<Description>$descEsc</Description>"
     }
@@ -4418,19 +4239,16 @@ function New-SfosMacHost
     $xmlMACType = ''
     $MACList = $MACAddress.Split(',')
 
-    if($MACList.Count -gt 1) 
-    {
+    if ($MACList.Count -gt 1) {
         $xmlMACType = '<Type>MACList</Type>'
         $xmlMAC = '<MACList>'
-        foreach ($mac in $MACList) 
-        {
+        foreach ($mac in $MACList) {
             $macEsc = ConvertTo-SfosXmlEscaped -Text $mac
             $xmlMAC += "<MACAddress>$macEsc</MACAddress>"
         }
         $xmlMAC += '</MACList>'
     }
-    else 
-    {
+    else {
         $xmlMACType = '<Type>MACAddress</Type>'
         $xmlMAC = "<MACAddress>$macEsc</MACAddress>"
     }
@@ -4448,16 +4266,14 @@ function New-SfosMacHost
 "@
 
     # Send API Request
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error creating MACHost object '': $($_.Exception.Message)"
     }
 
@@ -4519,8 +4335,7 @@ function New-SfosMacHost
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Set-SfosMacHost 
-{
+function Set-SfosMacHost {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -4552,8 +4367,7 @@ function Set-SfosMacHost
         $macEsc = ConvertTo-SfosXmlEscaped -Text $MACAddress
 
         $xmlDescription = ''
-        if ($Description) 
-        {
+        if ($Description) {
             $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
             $xmlDescription = "<Description>$descEsc</Description>"
         }
@@ -4562,18 +4376,15 @@ function Set-SfosMacHost
         $xmlMAC = ''
         $MACList = $MACAddress.Split(',')
 
-        if ($MACList.Count -gt 1) 
-        {
+        if ($MACList.Count -gt 1) {
             $xmlMAC = '<MACList>'
-            foreach ($mac in $MACList) 
-            {
+            foreach ($mac in $MACList) {
                 $macEsc = ConvertTo-SfosXmlEscaped -Text $mac
                 $xmlMAC += "<MACAddress>$macEsc</MACAddress>"
             }
             $xmlMAC += '</MACList>'
         }
-        else 
-        {
+        else {
             $xmlMAC = "<MACAddress>$macEsc</MACAddress>"
         }
 
@@ -4589,16 +4400,14 @@ function Set-SfosMacHost
 "@
 
         # Send API Request
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error updating MACHost object '': $($_.Exception.Message)"
         }
 
@@ -4654,8 +4463,7 @@ function Set-SfosMacHost
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosMacHost 
-{
+function Remove-SfosMacHost {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -4676,8 +4484,7 @@ function Remove-SfosMacHost
     }
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("MACHost '$Name' on $($params.Firewall)", 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess("MACHost '$Name' on $($params.Firewall)", 'Remove')) {
             return
         }
 
@@ -4691,16 +4498,14 @@ function Remove-SfosMacHost
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error removing MACHost object '': $($_.Exception.Message)"
         }
 
@@ -4832,13 +4637,13 @@ function Export-SfosMacHosts {
 
         # Return summary object
         return [PSCustomObject]@{
-            Operation     = 'Export'
-            ObjectType    = 'MacHost'
-            Total         = $macHosts.Count
-            Success       = $macHosts.Count
-            Failed        = 0
-            SuccessItems  = @($macHosts.Name)
-            FailedItems   = @()
+            Operation    = 'Export'
+            ObjectType   = 'MacHost'
+            Total        = $macHosts.Count
+            Success      = $macHosts.Count
+            Failed       = 0
+            SuccessItems = @($macHosts.Name)
+            FailedItems  = @()
         }
     }
     catch {
@@ -4979,13 +4784,13 @@ function Import-SfosMacHosts {
 
     # Return summary object
     return [PSCustomObject]@{
-        Operation     = 'Import'
-        ObjectType    = 'MacHost'
-        Total         = $macHosts.Count
-        Success       = $successItems.Count
-        Failed        = $failedItems.Count
-        SuccessItems  = $successItems
-        FailedItems   = $failedItems
+        Operation    = 'Import'
+        ObjectType   = 'MacHost'
+        Total        = $macHosts.Count
+        Success      = $successItems.Count
+        Failed       = $failedItems.Count
+        SuccessItems = $successItems
+        FailedItems  = $failedItems
     }
 }
 
@@ -5047,8 +4852,7 @@ function Import-SfosMacHosts {
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Get-SfosCountryHostGroup 
-{
+function Get-SfosCountryHostGroup {
     [CmdletBinding()]
     param(
         # Functional parameters
@@ -5069,14 +4873,12 @@ function Get-SfosCountryHostGroup
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
 
     $filterXml = ''
-    if ($NameLike) 
-    {
+    if ($NameLike) {
         $nameLikeEsc = ConvertTo-SfosXmlEscaped -Text $NameLike
         $filterXml = ('<Filter><key name="Name" criteria="like">{0}</key></Filter>' -f $nameLikeEsc)
     }
 
-    if ($DescriptionLike) 
-    {
+    if ($DescriptionLike) {
         $descLikeEsc = ConvertTo-SfosXmlEscaped -Text $DescriptionLike
         $filterXml += ('<Filter><key name="Description" criteria="like">{0}</key></Filter>' -f $descLikeEsc)
     }
@@ -5089,16 +4891,14 @@ function Get-SfosCountryHostGroup
 </Get>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error retrieving CountryHostGroup objects: $($_.Exception.Message)"
     }
 
@@ -5109,15 +4909,13 @@ function Get-SfosCountryHostGroup
         $_.Node
     }
 
-    if ($AsXml) 
-    {
+    if ($AsXml) {
         return @($nodes)
     }
 
     # Erstelle PSCustomObjects
     $countryHostGroupObjects = @()
-    foreach ($node in $nodes) 
-    {
+    foreach ($node in $nodes) {
         $countryHostGroupObjects += [PSCustomObject]@{
             Name        = $node.Name
             Description = $node.Description
@@ -5205,8 +5003,7 @@ function Get-SfosCountryHostGroup
         .LINK
         Remove-SfosCountryHostGroup
 #>
-function New-SfosCountryHostGroup 
-{
+function New-SfosCountryHostGroup {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -5233,18 +5030,15 @@ function New-SfosCountryHostGroup
 
     # Setup Description XML
     $xmlDescription = ''
-    if ($Description) 
-    {
+    if ($Description) {
         $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
         $xmlDescription = "<Description>$descEsc</Description>"
     }
 
     # Setup Countries XML
     $countriesXml = ''
-    foreach ($country in $countries) 
-    {
-        if (-not $country) 
-        {
+    foreach ($country in $countries) {
+        if (-not $country) {
             continue
         }
         $cEsc = ConvertTo-SfosXmlEscaped -Text $country
@@ -5253,8 +5047,7 @@ function New-SfosCountryHostGroup
 
     # Build Countries List XML
     $xmlCountriesList = ''
-    if( $countriesXml ) 
-    {
+    if ( $countriesXml ) {
         $xmlCountriesList = @"
 <CountryList>
     $countriesXml
@@ -5273,16 +5066,14 @@ function New-SfosCountryHostGroup
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
     }
-    catch 
-    {
+    catch {
         throw "Error creating CountryHostGroup object '': $($_.Exception.Message)"
     }
 
@@ -5341,8 +5132,7 @@ function New-SfosCountryHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Set-SfosCountryHostGroup 
-{
+function Set-SfosCountryHostGroup {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -5375,18 +5165,15 @@ function Set-SfosCountryHostGroup
 
         # Setup Description XML
         $xmlDescription = ''
-        if ($Description) 
-        {
+        if ($Description) {
             $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
             $xmlDescription = "<Description>$descEsc</Description>"
         }
 
         # Setup Countries XML
         $countriesXml = ''
-        foreach ($country in $countries) 
-        {
-            if (-not $country) 
-            {
+        foreach ($country in $countries) {
+            if (-not $country) {
                 continue
             }
             $cEsc = ConvertTo-SfosXmlEscaped -Text $country
@@ -5395,8 +5182,7 @@ function Set-SfosCountryHostGroup
 
         # Build Countries List XML
         $xmlCountriesList = ''
-        if ( $countriesXml ) 
-        {
+        if ( $countriesXml ) {
             $xmlCountriesList = @"
 <CountryList>
     $countriesXml
@@ -5415,16 +5201,14 @@ function Set-SfosCountryHostGroup
 </Set>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error updating CountryHostGroup object '': $($_.Exception.Message)"
         }
 
@@ -5480,8 +5264,7 @@ function Set-SfosCountryHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosCountryHostGroup 
-{
+function Remove-SfosCountryHostGroup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -5502,8 +5285,7 @@ function Remove-SfosCountryHostGroup
     }
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("CountryHostGroup '$Name' on $($params.Firewall)", 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess("CountryHostGroup '$Name' on $($params.Firewall)", 'Remove')) {
             return
         }
 
@@ -5517,16 +5299,14 @@ function Remove-SfosCountryHostGroup
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck -ErrorAction Stop
         }
-        catch 
-        {
+        catch {
             throw "Error removing CountryHostGroup object '': $($_.Exception.Message)"
         }
 
@@ -5654,14 +5434,13 @@ function Remove-SfosCountryHostGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Get-SfosService 
-{
+function Get-SfosService {
     [CmdletBinding()]
     param(
         # Functional parameters
         [string]$NameLike,
         [string]$DescriptionLike,
-        [ValidateSet('TCPorUDP','IP','ICMP','ICMPv6')]
+        [ValidateSet('TCPorUDP', 'IP', 'ICMP', 'ICMPv6')]
         [string]$TypeLike,
         [string]$ProtocolLike,
         [string]$SourcePortLike,
@@ -5683,48 +5462,41 @@ function Get-SfosService
     # Classic serverside Filtering
     $result = @()
     $filterXml = ''
-    if ($NameLike) 
-    {
+    if ($NameLike) {
         $nameLikeEsc = ConvertTo-SfosXmlEscaped -Text $NameLike
         $filterXml = ('<Filter><key name="Name" criteria="like">{0}</key></Filter>' -f $nameLikeEsc)
     }
 
-    if ($DescriptionLike) 
-    {
+    if ($DescriptionLike) {
         $descLikeEsc = ConvertTo-SfosXmlEscaped -Text $DescriptionLike
         $filterXml += ('<Filter><key name="Description" criteria="like">{0}</key></Filter>' -f $descLikeEsc)
     }
 
-    if ($TypeLike) 
-    {
+    if ($TypeLike) {
         $typeLikeEsc = ConvertTo-SfosXmlEscaped -Text $TypeLike
         $filterXml += ('<Filter><key name="Type" criteria="=">{0}</key></Filter>' -f $typeLikeEsc)
     }
 
     
     # Advanced filtering done, return results if any filter applied
-    if ($ProtocolLike -or $SourcePortLike -or $DestinationPortLike) 
-    {
+    if ($ProtocolLike -or $SourcePortLike -or $DestinationPortLike) {
         $allServices = Get-SfosService
         
-        if ($ProtocolLike) 
-        {
+        if ($ProtocolLike) {
             $protocolLikeEsc = ConvertTo-SfosXmlEscaped -Text $ProtocolLike
             $result += $allServices | Where-Object -FilterScript {
                 $_.ServiceDetails.Protocol -like $protocolLikeEsc
             }
         }
 
-        if ($SourcePortLike) 
-        {
+        if ($SourcePortLike) {
             $sourcePortLikeEsc = ConvertTo-SfosXmlEscaped -Text $SourcePortLike
             $result += $allServices | Where-Object -FilterScript {
                 $_.ServiceDetails.SourcePort -like $sourcePortLikeEsc
             }
         }
     
-        if ($DestinationPortLike) 
-        {
+        if ($DestinationPortLike) {
             $destinationPortLikeEsc = ConvertTo-SfosXmlEscaped -Text $DestinationPortLike
             $result += $allServices | Where-Object -FilterScript {
                 $_.ServiceDetails.DestinationPort -like $destinationPortLikeEsc
@@ -5745,66 +5517,57 @@ function Get-SfosService
 
     # Invoke API
     $response = Invoke-SfosApi -Firewall $params.Firewall `
-    -Port $params.Port `
-    -Username $params.Username `
-    -Password $params.Password `
-    -InnerXml $inner `
-    -SkipCertificateCheck:$params.SkipCertificateCheck
+        -Port $params.Port `
+        -Username $params.Username `
+        -Password $params.Password `
+        -InnerXml $inner `
+        -SkipCertificateCheck:$params.SkipCertificateCheck
     
     $XmlResponse = [xml]$response.Content
     Assert-SfosApiReturnSuccess -Xml $XmlResponse -ObjectName 'Services' -Action 'get'
 
     $nodeList = Select-Xml -Xml $XmlResponse -XPath '/Response/Services[Name]' -ErrorAction SilentlyContinue | `
-    ForEach-Object -Process {
+        ForEach-Object -Process {
         $_.Node
     }
 
     # Return raw XML if requested
-    if ($AsXml) 
-    {
+    if ($AsXml) {
         return @($nodeList)
     }
 
     # Create PSCustomObjectss
-    try
-    {
-        $result = foreach ($nodeItem in @($nodeList)) 
-        {
+    try {
+        $result = foreach ($nodeItem in @($nodeList)) {
             $serviceNodes = @()
             $serviceNodes += $nodeItem.ServiceDetails | Select-Object -ExpandProperty ServiceDetail
         
-            $serviceObjects = foreach ($serviceItem in $serviceNodes) 
-            {
-                if($nodeItem.Type -like 'TCPorUDP') 
-                {
+            $serviceObjects = foreach ($serviceItem in $serviceNodes) {
+                if ($nodeItem.Type -like 'TCPorUDP') {
                     [pscustomobject]@{
                         SourcePort      = [string]$serviceItem.SourcePort
                         DestinationPort = [string]$serviceItem.DestinationPort
                         Protocol        = [string]$serviceItem.Protocol
                     }
                 }
-                elseif($nodeItem.Type -like 'IP') 
-                {
+                elseif ($nodeItem.Type -like 'IP') {
                     [pscustomobject]@{
                         ProtocolName = [string]$serviceItem.ProtocolName
                     }
                 }
-                elseif($nodeItem.Type -like 'ICMP') 
-                {
+                elseif ($nodeItem.Type -like 'ICMP') {
                     [pscustomobject]@{
                         ICMPType = [string]$serviceItem.ICMPType
                         ICMPCode = [string]$serviceItem.ICMPCode
                     }
                 }
-                elseif($nodeItem.Type -like 'ICMPv6') 
-                {
+                elseif ($nodeItem.Type -like 'ICMPv6') {
                     [pscustomobject]@{
                         ICMPv6Type = [string]$serviceItem.ICMPv6Type
                         ICMPv6Code = [string]$serviceItem.ICMPv6Code
                     }
                 }
-                else 
-                {
+                else {
                     Write-Warning -Message ('[W] Could not detect ServiceType:{0}' -f $nodeItem.Type)
                 }
             }
@@ -5818,8 +5581,7 @@ function Get-SfosService
             }
         }
     }
-    catch [Management.Automation.RuntimeException]
-    {
+    catch [Management.Automation.RuntimeException] {
         # get error record
         [Management.Automation.ErrorRecord]$e = $_
 
@@ -5954,8 +5716,7 @@ function Get-SfosService
         .LINK
         New-SfosServiceGroup
 #>
-function New-SfosService 
-{
+function New-SfosService {
     [CmdletBinding(DefaultParameterSetName = 'TCPUDP')]
     param(
         [Parameter(Mandatory, Position = 0)]
@@ -6014,51 +5775,42 @@ function New-SfosService
     # Initialisierung des Service-Details basierend auf dem Parameter-Set
     $detailXml = ''
     switch ($PSCmdlet.ParameterSetName) {
-        'TCPUDP' 
-        {
+        'TCPUDP' {
             $detailXml = "<Protocol>$Protocol</Protocol><SourcePort>$SrcPort</SourcePort><DestinationPort>$DstPort</DestinationPort>" 
         }
-        'IP' 
-        {
+        'IP' {
             $Type = 'IP'
             $detailXml = "<ProtocolName>$ProtocolName</ProtocolName>"
         }
-        'ICMP' 
-        {
+        'ICMP' {
             $detailXml = "<ICMPType>$($ICMPType -join ',')</ICMPType><ICMPCode>$($ICMPCode -join ',')</ICMPCode>" 
         }
-        'ICMPv6' 
-        {
+        'ICMPv6' {
             $detailXml = "<ICMPv6Type>$($ICMPv6Type -join ',')</ICMPv6Type><ICMPv6Code>$($ICMPv6Code -join ',')</ICMPv6Code>" 
         }
     }
 
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
     $nameEsc = ConvertTo-SfosXmlEscaped -Text $Name
-    $xmlDescription = if ($Description) 
-    {
+    $xmlDescription = if ($Description) {
         "<Description>$(ConvertTo-SfosXmlEscaped -Text $Description)</Description>" 
     }
-    else 
-    {
+    else {
         '' 
     }
     $inner = "<Set operation='add'><Services><Name>$nameEsc</Name>$xmlDescription<Type>$Type</Type><ServiceDetails><ServiceDetail>$detailXml</ServiceDetail></ServiceDetails></Services></Set>"
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall -Port $params.Port -Username $params.Username -Password $params.Password -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck
         $XmlResponse = [xml]$response.Content
         Assert-SfosApiReturnSuccess -Xml $XmlResponse -ObjectName 'Service' -Action 'create' -Target $Name
     }
-    catch 
-    {
+    catch {
         throw "Failed to create Service '$Name': $($_.Exception.Message)"
     }
 }
 
-function Set-SfosService 
-{
+function Set-SfosService {
     [CmdletBinding(DefaultParameterSetName = 'TCPUDP')]
     param(
         [Parameter(Mandatory, Position = 0)]
@@ -6111,46 +5863,38 @@ function Set-SfosService
     
     $detailXml = ''
     switch ($PSCmdlet.ParameterSetName) {
-        'TCPUDP' 
-        {
+        'TCPUDP' {
             $detailXml = "<Protocol>$Protocol</Protocol><SourcePort>$SrcPort</SourcePort><DestinationPort>$DstPort</DestinationPort>"
         }
-        'IP' 
-        {
+        'IP' {
             $Type = 'IP'
             $detailXml = "<ProtocolName>$ProtocolName</ProtocolName>"
         }
-        'ICMP' 
-        {
+        'ICMP' {
             $detailXml = "<ICMPType>$($ICMPType -join ',')</ICMPType><ICMPCode>$($ICMPCode -join ',')</ICMPCode>"
         }
-        'ICMPv6' 
-        {
+        'ICMPv6' {
             $detailXml = "<ICMPv6Type>$($ICMPv6Type -join ',')</ICMPv6Type><ICMPv6Code>$($ICMPv6Code -join ',')</ICMPv6Code>"
         }
     }
     
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
     $nameEsc = ConvertTo-SfosXmlEscaped -Text $Name
-    $xmlDescription = if ($Description) 
-    {
+    $xmlDescription = if ($Description) {
         "<Description>$(ConvertTo-SfosXmlEscaped -Text $Description)</Description>" 
     }
-    else 
-    {
+    else {
         '' 
     }
 
     $inner = "<Set operation='edit'><Services><Name>$nameEsc</Name>$xmlDescription<Type>$Type</Type><ServiceDetails><ServiceDetail>$detailXml</ServiceDetail></ServiceDetails></Services></Set>"
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall -Port $params.Port -Username $params.Username -Password $params.Password -InnerXml $inner -SkipCertificateCheck:$params.SkipCertificateCheck
         $XmlResponse = [xml]$response.Content
         Assert-SfosApiReturnSuccess -Xml $XmlResponse -ObjectName 'Service' -Action 'edit' -Target $Name
     }
-    catch 
-    {
+    catch {
         throw "Failed to update Service '$Name': $($_.Exception.Message)"
     }
 }
@@ -6199,8 +5943,7 @@ function Set-SfosService
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosService 
-{
+function Remove-SfosService {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -6221,8 +5964,7 @@ function Remove-SfosService
     }
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("Service '$Name' on $($params.Firewall)", 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess("Service '$Name' on $($params.Firewall)", 'Remove')) {
             return
         }
 
@@ -6236,17 +5978,15 @@ function Remove-SfosService
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner `
-            -SkipCertificateCheck:$params.SkipCertificateCheck
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner `
+                -SkipCertificateCheck:$params.SkipCertificateCheck
         }
-        catch 
-        {
+        catch {
             throw "Failed to remove Service '$Name': $($_.Exception.Message)"
         }
         
@@ -6378,13 +6118,13 @@ function Export-SfosServices {
 
         # Return summary object
         return [PSCustomObject]@{
-            Operation     = 'Export'
-            ObjectType    = 'Service'
-            Total         = $services.Count
-            Success       = $services.Count
-            Failed        = 0
-            SuccessItems  = @($services.Name)
-            FailedItems   = @()
+            Operation    = 'Export'
+            ObjectType   = 'Service'
+            Total        = $services.Count
+            Success      = $services.Count
+            Failed       = 0
+            SuccessItems = @($services.Name)
+            FailedItems  = @()
         }
     }
     catch {
@@ -6531,13 +6271,13 @@ function Import-SfosServices {
 
     # Return summary object
     return [PSCustomObject]@{
-        Operation     = 'Import'
-        ObjectType    = 'Service'
-        Total         = $services.Count
-        Success       = $successItems.Count
-        Failed        = $failedItems.Count
-        SuccessItems  = $successItems
-        FailedItems   = $failedItems
+        Operation    = 'Import'
+        ObjectType   = 'Service'
+        Total        = $services.Count
+        Success      = $successItems.Count
+        Failed       = $failedItems.Count
+        SuccessItems = $successItems
+        FailedItems  = $failedItems
     }
 }
 
@@ -6598,8 +6338,7 @@ function Import-SfosServices {
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Get-SfosServiceGroup 
-{
+function Get-SfosServiceGroup {
     [CmdletBinding()]
     param(
         # Functional parameters
@@ -6620,14 +6359,12 @@ function Get-SfosServiceGroup
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
 
     $filterXml = ''
-    if ($NameLike) 
-    {
+    if ($NameLike) {
         $nameLikeEsc = ConvertTo-SfosXmlEscaped -Text $NameLike
         $filterXml = ('<Filter><key name="Name" criteria="like">{0}</key></Filter>' -f $nameLikeEsc)
     }
 
-    if ($DescriptionLike) 
-    {
+    if ($DescriptionLike) {
         $descLikeEsc = ConvertTo-SfosXmlEscaped -Text $DescriptionLike
         $filterXml += ('<Filter><key name="Description" criteria="like">{0}</key></Filter>' -f $descLikeEsc)
     }
@@ -6641,25 +6378,23 @@ function Get-SfosServiceGroup
 "@
 
     $response = Invoke-SfosApi -Firewall $params.Firewall `
-    -Port $params.Port `
-    -Username $params.Username `
-    -Password $params.Password `
-    -InnerXml $inner `
-    -SkipCertificateCheck:$params.SkipCertificateCheck
+        -Port $params.Port `
+        -Username $params.Username `
+        -Password $params.Password `
+        -InnerXml $inner `
+        -SkipCertificateCheck:$params.SkipCertificateCheck
         
     $XmlResponse = [xml]$response.Content
     $nodes = Select-Xml -Xml $XmlResponse -XPath '/Response/ServiceGroup[Name]' | ForEach-Object -Process {
         $_.Node
     }
-    if ($AsXml) 
-    {
+    if ($AsXml) {
         return @($nodes)
     }
 
     # Erstelle PSCustomObjects
     $serviceGroupObjects = @()
-    foreach ($node in $nodes) 
-    {
+    foreach ($node in $nodes) {
         $serviceGroupObjects += [PSCustomObject]@{
             Name        = $node.Name
             Description = $node.Description
@@ -6753,8 +6488,7 @@ function Get-SfosServiceGroup
         .LINK
         Remove-SfosServiceGroup
 #>
-function New-SfosServiceGroup 
-{
+function New-SfosServiceGroup {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -6780,26 +6514,21 @@ function New-SfosServiceGroup
 
     # Setup Description XML
     $xmlDescription = ''
-    if ($Description) 
-    {
+    if ($Description) {
         $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
         $xmlDescription = "<Description>$descEsc</Description>"
     }
 
     # Setup Members XML
     $xmlMember = ''
-    foreach ($member in $members) 
-    {
-        if (-not $member) 
-        {
+    foreach ($member in $members) {
+        if (-not $member) {
             continue
         }
-        if ($member.Length -gt 50) 
-        {
+        if ($member.Length -gt 50) {
             throw "Member '' must be 50 characters or fewer."
         }
-        if ($member -match ',') 
-        {
+        if ($member -match ',') {
             throw "Member '' cannot contain a comma."
         }
         $mEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -6808,8 +6537,7 @@ function New-SfosServiceGroup
 
     # Setup Members XML List
     $xmlServiceList = ''
-    if( $xmlMember ) 
-    {
+    if ( $xmlMember ) {
         $xmlServiceList = @"
 <ServiceList>
     $xmlMember
@@ -6828,17 +6556,15 @@ function New-SfosServiceGroup
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner `
-        -SkipCertificateCheck:$params.SkipCertificateCheck
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner `
+            -SkipCertificateCheck:$params.SkipCertificateCheck
     }
-    catch 
-    {
+    catch {
         throw "Failed to create ServiceGroup '$Name': $($_.Exception.Message)"
     }
 
@@ -6895,8 +6621,7 @@ function New-SfosServiceGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Set-SfosServiceGroup 
-{
+function Set-SfosServiceGroup {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -6929,26 +6654,21 @@ function Set-SfosServiceGroup
 
         # Setup Description XML
         $xmlDescription = ''
-        if ($Description) 
-        {
+        if ($Description) {
             $descEsc = ConvertTo-SfosXmlEscaped -Text $Description
             $xmlDescription = "<Description>$descEsc</Description>"
         }
 
         # Setup Members XML
         $xmlMember = ''
-        foreach ($member in $members) 
-        {
-            if (-not $member) 
-            {
+        foreach ($member in $members) {
+            if (-not $member) {
                 continue
             }
-            if ($member.Length -gt 50) 
-            {
+            if ($member.Length -gt 50) {
                 throw "Member '' must be 50 characters or fewer."
             }
-            if ($member -match ',') 
-            {
+            if ($member -match ',') {
                 throw "Member '' cannot contain a comma."
             }
             $mEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -6957,8 +6677,7 @@ function Set-SfosServiceGroup
         
         # Setup Members XML List
         $xmlServiceList = ''
-        if( $xmlMember ) 
-        {
+        if ( $xmlMember ) {
             $xmlServiceList = @"
 <ServiceList>
     $xmlMember
@@ -6977,17 +6696,15 @@ function Set-SfosServiceGroup
 </Set>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner `
-            -SkipCertificateCheck:$params.SkipCertificateCheck
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner `
+                -SkipCertificateCheck:$params.SkipCertificateCheck
         }
-        catch 
-        {
+        catch {
             throw "Failed to update ServiceGroup '$Name': $($_.Exception.Message)"
         }
 
@@ -7041,8 +6758,7 @@ function Set-SfosServiceGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosServiceGroup 
-{
+function Remove-SfosServiceGroup {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
@@ -7063,8 +6779,7 @@ function Remove-SfosServiceGroup
     }
 
     process {
-        if (-not $PSCmdlet.ShouldProcess("ServiceGroup '$Name' on $($params.Firewall)", 'Remove')) 
-        {
+        if (-not $PSCmdlet.ShouldProcess("ServiceGroup '$Name' on $($params.Firewall)", 'Remove')) {
             return
         }
 
@@ -7078,17 +6793,15 @@ function Remove-SfosServiceGroup
 </Remove>
 "@
 
-        try 
-        {
+        try {
             $response = Invoke-SfosApi -Firewall $params.Firewall `
-            -Port $params.Port `
-            -Username $params.Username `
-            -Password $params.Password `
-            -InnerXml $inner `
-            -SkipCertificateCheck:$params.SkipCertificateCheck
+                -Port $params.Port `
+                -Username $params.Username `
+                -Password $params.Password `
+                -InnerXml $inner `
+                -SkipCertificateCheck:$params.SkipCertificateCheck
         }
-        catch 
-        {
+        catch {
             throw "Failed to remove ServiceGroup '$Name': $($_.Exception.Message)"
         }
 
@@ -7141,8 +6854,7 @@ function Remove-SfosServiceGroup
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Add-SfosServiceGroupMember 
-{
+function Add-SfosServiceGroupMember {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -7167,18 +6879,14 @@ function Add-SfosServiceGroupMember
 
     # Setup Members XML
     $xmlMember = ''
-    foreach ($member in $members) 
-    {
-        if (-not $member) 
-        {
+    foreach ($member in $members) {
+        if (-not $member) {
             continue
         }
-        if ($member.Length -gt 50) 
-        {
+        if ($member.Length -gt 50) {
             throw "Member '' must be 50 characters or fewer."
         }
-        if ($member -match ',') 
-        {
+        if ($member -match ',') {
             throw "Member '' cannot contain a comma."
         }
         $mEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -7197,17 +6905,15 @@ function Add-SfosServiceGroupMember
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner `
-        -SkipCertificateCheck:$params.SkipCertificateCheck
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner `
+            -SkipCertificateCheck:$params.SkipCertificateCheck
     }
-    catch 
-    {
+    catch {
         throw "Failed to add members to ServiceGroup '$ServiceGroupName': $($_.Exception.Message)"
     }
 
@@ -7257,8 +6963,7 @@ function Add-SfosServiceGroupMember
         .LINK
         https://docs.sophos.com/nsg/sophos-firewall/21.5/api/
 #>
-function Remove-SfosServiceGroupMember 
-{
+function Remove-SfosServiceGroupMember {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -7283,18 +6988,14 @@ function Remove-SfosServiceGroupMember
 
     # Setup Members XML
     $xmlMember = ''
-    foreach ($member in $members) 
-    {
-        if (-not $member) 
-        {
+    foreach ($member in $members) {
+        if (-not $member) {
             continue
         }
-        if ($member.Length -gt 50) 
-        {
+        if ($member.Length -gt 50) {
             throw "Member '' must be 50 characters or fewer."
         }
-        if ($member -match ',') 
-        {
+        if ($member -match ',') {
             throw "Member '' cannot contain a comma."
         }
         $mEsc = ConvertTo-SfosXmlEscaped -Text $member
@@ -7313,17 +7014,15 @@ function Remove-SfosServiceGroupMember
 </Set>
 "@
 
-    try 
-    {
+    try {
         $response = Invoke-SfosApi -Firewall $params.Firewall `
-        -Port $params.Port `
-        -Username $params.Username `
-        -Password $params.Password `
-        -InnerXml $inner `
-        -SkipCertificateCheck:$params.SkipCertificateCheck
+            -Port $params.Port `
+            -Username $params.Username `
+            -Password $params.Password `
+            -InnerXml $inner `
+            -SkipCertificateCheck:$params.SkipCertificateCheck
     }
-    catch 
-    {
+    catch {
         throw "Failed to remove members from ServiceGroup '$Name': $($_.Exception.Message)"
     }
 
@@ -7464,13 +7163,13 @@ function Export-SfosServiceGroups {
 
         # Return summary object
         return [PSCustomObject]@{
-            Operation     = 'Export'
-            ObjectType    = 'ServiceGroup'
-            Total         = $serviceGroups.Count
-            Success       = $serviceGroups.Count
-            Failed        = 0
-            SuccessItems  = @($serviceGroups.Name)
-            FailedItems   = @()
+            Operation    = 'Export'
+            ObjectType   = 'ServiceGroup'
+            Total        = $serviceGroups.Count
+            Success      = $serviceGroups.Count
+            Failed       = 0
+            SuccessItems = @($serviceGroups.Name)
+            FailedItems  = @()
         }
     }
     catch {
@@ -7624,13 +7323,13 @@ function Import-SfosServiceGroups {
 
     # Return summary object
     return [PSCustomObject]@{
-        Operation     = 'Import'
-        ObjectType    = 'ServiceGroup'
-        Total         = $serviceGroups.Count
-        Success       = $successItems.Count
-        Failed        = $failedItems.Count
-        SuccessItems  = $successItems
-        FailedItems   = $failedItems
+        Operation    = 'Import'
+        ObjectType   = 'ServiceGroup'
+        Total        = $serviceGroups.Count
+        Success      = $successItems.Count
+        Failed       = $failedItems.Count
+        SuccessItems = $successItems
+        FailedItems  = $failedItems
     }
 }
 

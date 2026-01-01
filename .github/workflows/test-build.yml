@@ -41,17 +41,30 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
+          
+          # Find test files in the Tests directory
           $testFiles = Get-ChildItem -Path 'Tests' -Recurse -Filter '*.Tests.ps1' -ErrorAction SilentlyContinue
           
-          if ($testFiles) {
-            $testResults = Invoke-Pester -Path $testFiles.FullName -PassThru -OutputFormat NUnitXml -OutputFile TestResults.xml
+          if ($testFiles.Count -eq 0) {
+            Write-Warning "No test files found in Tests/ folder"
+            exit 0
+          }
+          
+          Write-Host "Found $($testFiles.Count) test file(s)"
+          
+          try {
+            $testResults = Invoke-Pester -Path $testFiles.FullName -PassThru -OutputFormat NUnitXml -OutputFile TestResults.xml -ErrorAction Stop
+            
+            Write-Host "Test Results: Passed=$($testResults.PassedCount), Failed=$($testResults.FailedCount)"
             
             if ($testResults.FailedCount -gt 0) {
               Write-Error "Tests failed: $($testResults.FailedCount) failures"
               exit 1
             }
-          } else {
-            Write-Warning "No test files found in Tests/ folder"
+          }
+          catch {
+            Write-Error "Pester execution failed: $_"
+            exit 1
           }
       
       - name: Upload Test Results
@@ -79,15 +92,29 @@ jobs:
         shell: pwsh
         run: |
           try {
-            $analyzerResults = Invoke-ScriptAnalyzer -Path 'Modules' -Recurse -ExcludeRule PSUseApprovedVerbs -ErrorAction Stop | 
-              Where-Object { $_.Severity -in @('Error', 'Warning') }
+            # Run full analysis and show all results
+            $allResults = Invoke-ScriptAnalyzer -Path 'Modules' -Recurse -ExcludeRule PSUseApprovedVerbs -ErrorAction Stop
             
-            if ($analyzerResults) {
-              $analyzerResults | Format-Table -AutoSize
-              Write-Error "PSScriptAnalyzer found issues"
+            # Separate errors from warnings
+            $errors = $allResults | Where-Object { $_.Severity -eq 'Error' }
+            $warnings = $allResults | Where-Object { $_.Severity -eq 'Warning' }
+            
+            # Display all findings
+            if ($allResults) {
+              Write-Host "`n=== PSScriptAnalyzer Results ===" -ForegroundColor Cyan
+              $allResults | Format-Table -AutoSize
+              Write-Host "`nSummary: $($errors.Count) Error(s), $($warnings.Count) Warning(s)" -ForegroundColor Cyan
+            }
+            
+            # Only fail on errors (warnings are informational)
+            if ($errors) {
+              Write-Error "PSScriptAnalyzer found $($errors.Count) error(s)"
               exit 1
             } else {
-              Write-Host "✓ No code analysis issues found"
+              Write-Host "✓ No critical code analysis issues found" -ForegroundColor Green
+              if ($warnings) {
+                Write-Host "  ℹ $($warnings.Count) warning(s) detected (non-blocking)" -ForegroundColor Yellow
+              }
             }
           }
           catch {

@@ -63,11 +63,11 @@ function ConvertTo-SfosXmlEscaped {
     
     process {
         return ($Text `
-            -replace '&', '&amp;' `
-            -replace '<', '&lt;' `
-            -replace '>', '&gt;' `
-            -replace '"', '&quot;' `
-            -replace "'", '&apos;')
+                -replace '&', '&amp;' `
+                -replace '<', '&lt;' `
+                -replace '>', '&gt;' `
+                -replace '"', '&quot;' `
+                -replace "'", '&apos;')
     }
 }
 
@@ -143,14 +143,16 @@ function Invoke-SfosApi {
                 # Save current callback before modifying global state
                 $savedCertCallback = [Net.ServicePointManager]::ServerCertificateValidationCallback
                 [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-            } else {
+            }
+            else {
                 # PS 7+: Use parameter instead of global callback
                 return Invoke-WebRequest @invokeParams -SkipCertificateCheck
             }
         }
         
         return Invoke-WebRequest @invokeParams
-    } finally {
+    }
+    finally {
         # Restore previous certificate validation callback
         if ($null -ne $savedCertCallback) {
             [Net.ServicePointManager]::ServerCertificateValidationCallback = $savedCertCallback
@@ -206,7 +208,8 @@ function Get-SfosApiStatus {
     if ($ObjectName -and $Xml.Response.$ObjectName -and ($Xml.Response.$ObjectName.Status -notlike '')) {
         $statusNode = $Xml.Response.$ObjectName.Status
         $hint = "/Response/$ObjectName/Status"
-    } elseif ($Xml.Response -and $Xml.Response.Status) {
+    }
+    elseif ($Xml.Response -and $Xml.Response.Status) {
         $statusNode = $Xml.Response.Status
         $hint = '/Response/Status'
     }
