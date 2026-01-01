@@ -24,6 +24,9 @@
 
 #region Module Variables
 
+# Default Sophos Firewall API port
+[int]$script:DefaultSfosPort = 4444
+
 # Session context for connection reuse across cmdlets
 $script:SfosConnection = $null
 
@@ -53,54 +56,42 @@ function ConvertTo-SfosXmlEscaped {
     [CmdletBinding()]
     [OutputType([string])]
     param(
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory, ValueFromPipeline)]
         [AllowEmptyString()]
         [string]$Text
     )
     
-    return ($Text `
-        -replace '&', '&amp;' `
-        -replace '<', '&lt;' `
-        -replace '>', '&gt;' `
-        -replace '"', '&quot;' `
-        -replace "'", '&apos;')
+    process {
+        return ($Text `
+            -replace '&', '&amp;' `
+            -replace '<', '&lt;' `
+            -replace '>', '&gt;' `
+            -replace '"', '&quot;' `
+            -replace "'", '&apos;')
+    }
 }
-
-#endregion
-
-#region API Communication
 
 <#
 .SYNOPSIS
-    Invokes the Sophos Firewall XML API.
-
+    Invokes a Sophos Firewall API request.
 .DESCRIPTION
-    Sends an XML request to the Sophos Firewall API endpoint and returns the raw response.
-    Handles both PowerShell 5.1 and 7+ certificate validation.
-
+    Sends an XML request to the Sophos Firewall API endpoint and returns the response.
 .PARAMETER Firewall
-    Sophos Firewall hostname or IP address.
-
+    The Sophos Firewall hostname or IP address.
 .PARAMETER Port
-    Management/API port number (default: 4444).
-
+    The management/API port number (default: 4444).
 .PARAMETER Username
-    Username for API authentication.
-
+    The username for authentication (protected via XML-escaping).
 .PARAMETER Password
-    Password for API authentication as SecureString.
-
+    The password for authentication (as SecureString for security).
 .PARAMETER InnerXml
-    XML content to send within the <Request> tags.
-
+    The inner XML content of the API request.
 .PARAMETER SkipCertificateCheck
     Skips SSL certificate validation for self-signed certificates.
-
 .OUTPUTS
-    Microsoft.PowerShell.Commands.WebResponseObject. Raw web response.
-
+    The response from the API as a WebResponseObject.
 .EXAMPLE
-    Invoke-SfosApi -Firewall "192.168.1.1" -Username "admin" -Password (ConvertTo-SecureString "pass" -AsPlainText -Force) -InnerXml "<Get><Zone/></Get>"
+    Invoke-SfosApi -Firewall "firewall.example.com" -Port 4444 -Username (ConvertTo-SecureString "admin" -AsPlainText -Force) -Password (ConvertTo-SecureString "password" -AsPlainText -Force) -InnerXml "<SomeRequest>Data</SomeRequest>" -SkipCertificateCheck
 #>
 function Invoke-SfosApi {
     [CmdletBinding()]
@@ -108,10 +99,10 @@ function Invoke-SfosApi {
         [Parameter(Mandatory)]
         [string]$Firewall,
         
-        [int]$Port = 4444,
+        [int]$Port = $script:DefaultSfosPort,
         
         [Parameter(Mandatory)]
-        [SecureString]$Username,
+        [string]$Username,
         
         [Parameter(Mandatory)]
         [SecureString]$Password,
@@ -122,34 +113,57 @@ function Invoke-SfosApi {
         [switch]$SkipCertificateCheck
     )
     
-    # Convert SecureString password to plaintext for XML request
-    $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-        [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password)
-    )
+    # Variables for secure handling and cleanup
+    $plainPassword = $null
+    $passwordBstr = $null
+    $savedCertCallback = $null
     
-    $uri = ("https://{0}:{1}/webconsole/APIController" -f $Firewall, $Port)
-    $body = "reqxml=<Request><Login><Username>$Username</Username><Password>$plainPassword</Password></Login>$InnerXml</Request>"
-    
-    $invokeParams = @{
-        Uri         = $uri
-        Method      = 'Post'
-        Body        = $body
-        ErrorAction = 'Stop'
-    }
-    
-    $useNewParam = $false
-    if ($SkipCertificateCheck) {
-        if ($PSVersionTable.PSVersion.Major -le 5) {
-            [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-        } else {
-            $useNewParam = $true
+    try {
+        # Security: XML-escape credentials to prevent injection attacks
+        $usernameEscaped = ConvertTo-SfosXmlEscaped -Text $Username
+        
+        # Convert Password SecureString to plaintext with BSTR cleanup
+        $passwordBstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password)
+        $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto($passwordBstr)
+        $passwordEscaped = ConvertTo-SfosXmlEscaped -Text $plainPassword
+        
+        $uri = ("https://{0}:{1}/webconsole/APIController" -f $Firewall, $Port)
+        $body = "reqxml=<Request><Login><Username>$usernameEscaped</Username><Password>$passwordEscaped</Password></Login>$InnerXml</Request>"
+        
+        $invokeParams = @{
+            Uri         = $uri
+            Method      = 'Post'
+            Body        = $body
+            ErrorAction = 'Stop'
         }
+        
+        # Handle certificate validation for PS 5.1 vs PS 7+
+        if ($SkipCertificateCheck) {
+            if ($PSVersionTable.PSVersion.Major -le 5) {
+                # Save current callback before modifying global state
+                $savedCertCallback = [Net.ServicePointManager]::ServerCertificateValidationCallback
+                [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+            } else {
+                # PS 7+: Use parameter instead of global callback
+                return Invoke-WebRequest @invokeParams -SkipCertificateCheck
+            }
+        }
+        
+        return Invoke-WebRequest @invokeParams
+    } finally {
+        # Restore previous certificate validation callback
+        if ($null -ne $savedCertCallback) {
+            [Net.ServicePointManager]::ServerCertificateValidationCallback = $savedCertCallback
+        }
+        
+        # Free BSTR memory to prevent leaks
+        if ($passwordBstr -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::FreeBSTR($passwordBstr)
+        }
+        
+        # Clear plaintext variables from memory
+        $plainPassword = $null
     }
-    
-    if ($useNewParam) {
-        return Invoke-WebRequest @invokeParams -SkipCertificateCheck
-    }
-    return Invoke-WebRequest @invokeParams
 }
 
 #endregion
@@ -305,9 +319,7 @@ function Resolve-SfosParameters {
             $resolved.Username = $script:SfosConnection.Username
         }
         if (-not $resolved.Password) {
-            $resolved.Password = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-                [Runtime.InteropServices.Marshal]::SecureStringToBSTR($script:SfosConnection.Password)
-            )
+            $resolved.Password = $script:SfosConnection.Password
         }
         if (-not $resolved.SkipCertificateCheck) {
             $resolved.SkipCertificateCheck = $script:SfosConnection.SkipCertificateCheck
@@ -315,11 +327,11 @@ function Resolve-SfosParameters {
     }
     
     if (-not $resolved.Firewall -or -not $resolved.Username -or -not $resolved.Password) {
-        throw 'Keine aktive Verbindung gefunden. Bitte Connect-SfosFirewall nutzen oder Firewall/Username/Password explizit angeben.'
+        throw 'No active Sophos Firewall connection found. Use Connect-SfosFirewall to establish a connection or provide Firewall, Username, and Password explicitly.'
     }
     
     if (-not $resolved.Port) {
-        $resolved.Port = 4444
+        $resolved.Port = $script:DefaultSfosPort
     }
     
     return $resolved
@@ -357,11 +369,14 @@ function Connect-SfosFirewall {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
         [string]$Firewall,
         
-        [int]$Port = 4444,
+        [ValidateRange(1, 65535)]
+        [int]$Port = $script:DefaultSfosPort,
         
         [Parameter(Mandatory)]
+        [ValidateNotNull()]
         [pscredential]$Credential,
         
         [switch]$SkipCertificateCheck
@@ -413,7 +428,4 @@ Export-ModuleMember -Function @(
     'ConvertTo-SfosXmlEscaped'
 )
 
-Export-ModuleMember -Variable 'SfosConnection'
-
 #endregion
-

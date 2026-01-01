@@ -25,7 +25,7 @@
     PrivateData          = @{
         PSData = @{
             Tags         = @('Sophos', 'Firewall', 'XGS', 'SFOS', 'API', 'Core', 'Helper')
-            LicenseUri   = ''
+            LicenseUri   = 'https://github.com/janweis/SophosFirewall-PowerShell/blob/main/Modules/SophosFirewall.Core/LICENSE'
             ProjectUri   = 'https://github.com/janweis/SophosFirewall-PowerShell/tree/main/Modules/SophosFirewall.Core'
             ReleaseNotes = @'
 Version 1.0.0 (2025-12-31)
