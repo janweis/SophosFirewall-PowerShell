@@ -19,7 +19,7 @@
     )
     
     CmdletsToExport      = @()
-    VariablesToExport    = @('SfosConnection')
+    VariablesToExport    = @()
     AliasesToExport      = @()
     
     PrivateData          = @{
