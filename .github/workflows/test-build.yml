@@ -125,13 +125,20 @@ jobs:
       - name: Validate Module Manifests
         shell: pwsh
         run: |
+          # Add Modules directory to PSModulePath so dependencies can be resolved
+          $modulesPath = Join-Path $PWD 'Modules'
+          $env:PSModulePath = "$modulesPath$([System.IO.Path]::PathSeparator)$env:PSModulePath"
+          
+          Write-Host "Module search paths:" -ForegroundColor Cyan
+          $env:PSModulePath -split [System.IO.Path]::PathSeparator | ForEach-Object { Write-Host "  - $_" }
+          
           $manifests = Get-ChildItem -Path 'Modules' -Recurse -Filter '*.psd1'
           $failCount = 0
           
           foreach ($manifest in $manifests) {
             try {
-              Test-ModuleManifest -Path $manifest.FullName -ErrorAction Stop | Out-Null
-              Write-Host "✓ Valid: $($manifest.Name)"
+              $testResult = Test-ModuleManifest -Path $manifest.FullName -ErrorAction Stop
+              Write-Host "✓ Valid: $($manifest.Name) (v$($testResult.Version))" -ForegroundColor Green
             }
             catch {
               Write-Error "✗ Invalid: $($manifest.Name) - $_"
