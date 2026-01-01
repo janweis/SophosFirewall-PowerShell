@@ -76,7 +76,7 @@ Describe 'SophosFirewall.Core Module' {
             ConvertTo-SfosXmlEscaped 'Say "Hello"' | Should -Be 'Say &quot;Hello&quot;'
         }
         
-        It 'Should escape apostrophe (\')' {
+        It "Should escape apostrophe (')" {
             ConvertTo-SfosXmlEscaped "It's" | Should -Be 'It&apos;s'
         }
         

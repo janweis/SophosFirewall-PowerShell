@@ -88,7 +88,7 @@ function ConvertTo-SfosXmlEscaped {
     Username for API authentication.
 
 .PARAMETER Password
-    Password for API authentication (plain text).
+    Password for API authentication as SecureString.
 
 .PARAMETER InnerXml
     XML content to send within the <Request> tags.
@@ -100,7 +100,7 @@ function ConvertTo-SfosXmlEscaped {
     Microsoft.PowerShell.Commands.WebResponseObject. Raw web response.
 
 .EXAMPLE
-    Invoke-SfosApi -Firewall "192.168.1.1" -Username "admin" -Password "pass" -InnerXml "<Get><Zone/></Get>"
+    Invoke-SfosApi -Firewall "192.168.1.1" -Username "admin" -Password (ConvertTo-SecureString "pass" -AsPlainText -Force) -InnerXml "<Get><Zone/></Get>"
 #>
 function Invoke-SfosApi {
     [CmdletBinding()]
@@ -111,10 +111,10 @@ function Invoke-SfosApi {
         [int]$Port = 4444,
         
         [Parameter(Mandatory)]
-        [string]$Username,
+        [SecureString]$Username,
         
         [Parameter(Mandatory)]
-        [string]$Password,
+        [SecureString]$Password,
         
         [Parameter(Mandatory)]
         [string]$InnerXml,
@@ -122,8 +122,13 @@ function Invoke-SfosApi {
         [switch]$SkipCertificateCheck
     )
     
+    # Convert SecureString password to plaintext for XML request
+    $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+        [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password)
+    )
+    
     $uri = ("https://{0}:{1}/webconsole/APIController" -f $Firewall, $Port)
-    $body = "reqxml=<Request><Login><Username>$Username</Username><Password>$Password</Password></Login>$InnerXml</Request>"
+    $body = "reqxml=<Request><Login><Username>$Username</Username><Password>$plainPassword</Password></Login>$InnerXml</Request>"
     
     $invokeParams = @{
         Uri         = $uri
@@ -411,3 +416,4 @@ Export-ModuleMember -Function @(
 Export-ModuleMember -Variable 'SfosConnection'
 
 #endregion
+

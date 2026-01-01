@@ -1,4 +1,4 @@
-﻿#requires -Version 5.1
+#requires -Version 5.1
 #requires -Modules SophosFirewall.Core
 
 <#
@@ -173,8 +173,8 @@ function Get-SfosIpHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck,
         
         # Output parameters
@@ -451,8 +451,8 @@ function New-SfosIpHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -690,8 +690,8 @@ function Set-SfosIpHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -857,8 +857,8 @@ function Remove-SfosIpHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -952,8 +952,8 @@ function Export-SfosIpHosts {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -986,7 +986,7 @@ function Export-SfosIpHosts {
             $ipHosts | ConvertTo-Json | Out-File -FilePath $FilePath -Encoding UTF8
         }
 
-        Write-Host "Exported IP hosts to '$FilePath' successfully." -ForegroundColor Green
+        Write-Information "Exported IP hosts to '$FilePath' successfully." -InformationAction Continue
     }
     catch {
         throw "Failed to export IP hosts to '$FilePath': $($_.Exception.Message)"
@@ -1030,8 +1030,8 @@ function Import-SfosIpHosts {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
     
@@ -1051,47 +1051,47 @@ function Import-SfosIpHosts {
     foreach ($ipHost in $ipHosts) {
 
         if (-not $ipHost.Name) {
-            Write-Host "Skipping entry without Name." -ForegroundColor Yellow
+            Write-Information "Skipping entry without Name." -InformationAction Continue
             continue
         }
 
         if ($ipHost.Name.StartsWith('#')) {
-            Write-Host "Skipping commented entry: $($ipHost.Name)" -ForegroundColor Yellow
+            Write-Information "Skipping commented entry: $($ipHost.Name)" -InformationAction Continue
             continue
         }
 
         if($ipHost.HostType -notin @('IP','Network','IPRange','IPList')) {
-            Write-Host "Skipping entry with invalid HostType '$($ipHost.HostType)': $($ipHost.Name)" -ForegroundColor Yellow
+            Write-Information "Skipping entry with invalid HostType '$($ipHost.HostType)': $($ipHost.Name)" -InformationAction Continue
             continue
         }
 
         switch($ipHost.HostType) {
             'IP' {
                 if (-not $ipHost.IPAddress) {
-                    Write-Host "Skipping IP host without IPAddress: $($ipHost.Name)" -ForegroundColor Yellow
+                    Write-Information "Skipping IP host without IPAddress: $($ipHost.Name)" -InformationAction Continue
                     continue
                 }
             }
             'Network' {
                 if (-not $ipHost.IPAddress -or -not $ipHost.Subnet) {
-                    Write-Host "Skipping Network host without IPAddress or Subnet: $($ipHost.Name)" -ForegroundColor Yellow
+                    Write-Information "Skipping Network host without IPAddress or Subnet: $($ipHost.Name)" -InformationAction Continue
                     continue
                 }
             }
             'IPRange' {
                 if (-not $ipHost.StartIPAddress -or -not $ipHost.EndIPAddress) {
-                    Write-Host "Skipping IPRange host without StartIPAddress or EndIPAddress: $($ipHost.Name)" -ForegroundColor Yellow
+                    Write-Information "Skipping IPRange host without StartIPAddress or EndIPAddress: $($ipHost.Name)" -InformationAction Continue
                     continue
                 }
             }
             'IPList' {
                 if (-not $ipHost.ListOfIPAddresses) {
-                    Write-Host "Skipping IPList host without ListOfIPAddresses: $($ipHost.Name)" -ForegroundColor Yellow
+                    Write-Information "Skipping IPList host without ListOfIPAddresses: $($ipHost.Name)" -InformationAction Continue
                     continue
                 }
             }
             default {
-                Write-Host "Skipping entry with invalid HostType '$($ipHost.HostType)': $($ipHost.Name)" -ForegroundColor Yellow
+                Write-Information "Skipping entry with invalid HostType '$($ipHost.HostType)': $($ipHost.Name)" -InformationAction Continue
                 continue
             }
         }
@@ -1122,10 +1122,10 @@ function Import-SfosIpHosts {
                 throw "Invalid HostType '$($ipHost.HostType)' for IP host: $($ipHost.Name)"
             }
 
-            Write-Host "Imported: $($ipHost.Name)" -ForegroundColor Green
+            Write-Information "Imported: $($ipHost.Name)" -InformationAction Continue
         }
         catch {
-            Write-Host "Failed to import '$($ipHost.Name)': $($_.Exception.Message)" -ForegroundColor Red
+            Write-Information "Failed to import '$($ipHost.Name)': $($_.Exception.Message)" -InformationAction Continue
         }
     }
 }
@@ -1198,8 +1198,8 @@ function Get-SfosIpHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck,
         
         # Output parameters
@@ -1354,8 +1354,8 @@ function New-SfosIpHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -1489,8 +1489,8 @@ function Set-SfosIpHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -1615,8 +1615,8 @@ function Remove-SfosIpHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -1720,8 +1720,8 @@ function Add-SfosIpHostGroupMember
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -1862,8 +1862,8 @@ function Remove-SfosIpHostGroupMember
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -2037,8 +2037,8 @@ function Export-SfosIpHostGroups {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -2088,7 +2088,7 @@ function Export-SfosIpHostGroups {
             $ipHostGroups | ConvertTo-Json | Out-File -FilePath $FilePath -Encoding UTF8
         }
 
-        Write-Host "Export of IP host groups to '$FilePath' successful." -ForegroundColor Green
+        Write-Information "Export of IP host groups to '$FilePath' successful." -InformationAction Continue
 
         # Return summary object
         return [PSCustomObject]@{
@@ -2179,8 +2179,8 @@ function Import-SfosIpHostGroups {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -2239,14 +2239,14 @@ function Import-SfosIpHostGroups {
                 -SkipCertificateCheck:$params.SkipCertificateCheck
             
             $successItems += $group.Name
-            Write-Host "Imported: $($group.Name)" -ForegroundColor Green
+            Write-Information "Imported: $($group.Name)" -InformationAction Continue
         }
         catch {
             $failedItems += [PSCustomObject]@{
                 Name  = $group.Name
                 Error = $_.Exception.Message
             }
-            Write-Host "Error importing '$($group.Name)': $($_.Exception.Message)" -ForegroundColor Red
+            Write-Information "Error importing '$($group.Name)': $($_.Exception.Message)" -InformationAction Continue
         }
     }
 
@@ -2330,8 +2330,8 @@ function Get-SfosFqdnHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck,
         
         # Output parameters
@@ -2505,8 +2505,8 @@ function New-SfosFqdnHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -2657,8 +2657,8 @@ function Set-SfosFqdnHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -2798,8 +2798,8 @@ function Remove-SfosFqdnHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -2856,8 +2856,8 @@ function Remove-SfosFqdnHostMass
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -2986,8 +2986,8 @@ function Export-SfosFqdnHosts {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -3025,7 +3025,7 @@ function Export-SfosFqdnHosts {
             $fqdnHosts | ConvertTo-Json | Out-File -FilePath $FilePath -Encoding UTF8
         }
 
-        Write-Host "Export of FQDN hosts to '$FilePath' successful." -ForegroundColor Green
+        Write-Information "Export of FQDN hosts to '$FilePath' successful." -InformationAction Continue
 
         # Return summary object
         return [PSCustomObject]@{
@@ -3115,8 +3115,8 @@ function Import-SfosFqdnHosts {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -3163,14 +3163,14 @@ function Import-SfosFqdnHosts {
                 -SkipCertificateCheck:$params.SkipCertificateCheck
             
             $successItems += $fqdnHost.Name
-            Write-Host "Imported: $($fqdnHost.Name)" -ForegroundColor Green
+            Write-Information "Imported: $($fqdnHost.Name)" -InformationAction Continue
         }
         catch {
             $failedItems += [PSCustomObject]@{
                 Name  = $fqdnHost.Name
                 Error = $_.Exception.Message
             }
-            Write-Host "Error importing '$($fqdnHost.Name)': $($_.Exception.Message)" -ForegroundColor Red
+            Write-Information "Error importing '$($fqdnHost.Name)': $($_.Exception.Message)" -InformationAction Continue
         }
     }
 
@@ -3255,8 +3255,8 @@ function Get-SfosFqdnHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck,
         
         # Output parameters
@@ -3387,8 +3387,8 @@ function New-SfosFqdnHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -3523,8 +3523,8 @@ function Set-SfosFqdnHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -3652,8 +3652,8 @@ function Remove-SfosFqdnHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -3715,8 +3715,8 @@ function Add-SfosFqdnHostGroupMember
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
@@ -3791,8 +3791,8 @@ function Remove-SfosFqdnHostGroupMember
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
     $params = Resolve-SfosParameters -BoundParameters $PSBoundParameters
@@ -3929,8 +3929,8 @@ function Export-SfosFqdnHostGroups {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -3980,7 +3980,7 @@ function Export-SfosFqdnHostGroups {
             $fqdnHostGroups | ConvertTo-Json | Out-File -FilePath $FilePath -Encoding UTF8
         }
 
-        Write-Host "Export of FQDN host groups to '$FilePath' successful." -ForegroundColor Green
+        Write-Information "Export of FQDN host groups to '$FilePath' successful." -InformationAction Continue
 
         # Return summary object
         return [PSCustomObject]@{
@@ -4071,8 +4071,8 @@ function Import-SfosFqdnHostGroups {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -4131,14 +4131,14 @@ function Import-SfosFqdnHostGroups {
                 -SkipCertificateCheck:$params.SkipCertificateCheck
             
             $successItems += $group.Name
-            Write-Host "Imported: $($group.Name)" -ForegroundColor Green
+            Write-Information "Imported: $($group.Name)" -InformationAction Continue
         }
         catch {
             $failedItems += [PSCustomObject]@{
                 Name  = $group.Name
                 Error = $_.Exception.Message
             }
-            Write-Host "Error importing '$($group.Name)': $($_.Exception.Message)" -ForegroundColor Red
+            Write-Information "Error importing '$($group.Name)': $($_.Exception.Message)" -InformationAction Continue
         }
     }
 
@@ -4222,8 +4222,8 @@ function Get-SfosMacHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck,
         
         # Output parameters
@@ -4395,8 +4395,8 @@ function New-SfosMacHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -4538,8 +4538,8 @@ function Set-SfosMacHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -4666,8 +4666,8 @@ function Remove-SfosMacHost
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -4789,8 +4789,8 @@ function Export-SfosMacHosts {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -4828,7 +4828,7 @@ function Export-SfosMacHosts {
             $macHosts | ConvertTo-Json | Out-File -FilePath $FilePath -Encoding UTF8
         }
 
-        Write-Host "Export of MAC hosts to '$FilePath' successful." -ForegroundColor Green
+        Write-Information "Export of MAC hosts to '$FilePath' successful." -InformationAction Continue
 
         # Return summary object
         return [PSCustomObject]@{
@@ -4918,8 +4918,8 @@ function Import-SfosMacHosts {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -4966,14 +4966,14 @@ function Import-SfosMacHosts {
                 -SkipCertificateCheck:$params.SkipCertificateCheck
             
             $successItems += $macHost.Name
-            Write-Host "Imported: $($macHost.Name)" -ForegroundColor Green
+            Write-Information "Imported: $($macHost.Name)" -InformationAction Continue
         }
         catch {
             $failedItems += [PSCustomObject]@{
                 Name  = $macHost.Name
                 Error = $_.Exception.Message
             }
-            Write-Host "Error importing '$($macHost.Name)': $($_.Exception.Message)" -ForegroundColor Red
+            Write-Information "Error importing '$($macHost.Name)': $($_.Exception.Message)" -InformationAction Continue
         }
     }
 
@@ -5058,8 +5058,8 @@ function Get-SfosCountryHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck,
         
         # Output parameters
@@ -5222,8 +5222,8 @@ function New-SfosCountryHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -5361,8 +5361,8 @@ function Set-SfosCountryHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -5492,8 +5492,8 @@ function Remove-SfosCountryHostGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -5670,8 +5670,8 @@ function Get-SfosService
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck,
         
         # Output parameters
@@ -5818,11 +5818,6 @@ function Get-SfosService
             }
         }
     }
-    # NOTE: When you use a SPECIFIC catch block, exceptions thrown by -ErrorAction Stop MAY LACK
-    # some InvocationInfo details such as ScriptLineNumber.
-    # REMEDY: If that affects you, remove the SPECIFIC exception type [System.Management.Automation.RuntimeException] in the code below
-    # and use ONE generic catch block instead. Such a catch block then handles ALL error types, so you would need to
-    # add the logic to handle different error types differently by yourself.
     catch [Management.Automation.RuntimeException]
     {
         # get error record
@@ -6011,8 +6006,8 @@ function New-SfosService
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -6109,8 +6104,8 @@ function Set-SfosService
         
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
     
@@ -6216,8 +6211,8 @@ function Remove-SfosService
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -6340,8 +6335,8 @@ function Export-SfosServices {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -6379,7 +6374,7 @@ function Export-SfosServices {
             $services | ConvertTo-Json | Out-File -FilePath $FilePath -Encoding UTF8
         }
 
-        Write-Host "Export of services to '$FilePath' successful." -ForegroundColor Green
+        Write-Information "Export of services to '$FilePath' successful." -InformationAction Continue
 
         # Return summary object
         return [PSCustomObject]@{
@@ -6469,8 +6464,8 @@ function Import-SfosServices {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -6523,14 +6518,14 @@ function Import-SfosServices {
                 -SkipCertificateCheck:$params.SkipCertificateCheck
             
             $successItems += $service.Name
-            Write-Host "Imported: $($service.Name)" -ForegroundColor Green
+            Write-Information "Imported: $($service.Name)" -InformationAction Continue
         }
         catch {
             $failedItems += [PSCustomObject]@{
                 Name  = $service.Name
                 Error = $_.Exception.Message
             }
-            Write-Host "Error importing '$($service.Name)': $($_.Exception.Message)" -ForegroundColor Red
+            Write-Information "Error importing '$($service.Name)': $($_.Exception.Message)" -InformationAction Continue
         }
     }
 
@@ -6614,8 +6609,8 @@ function Get-SfosServiceGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck,
         
         # Output parameters
@@ -6775,8 +6770,8 @@ function New-SfosServiceGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -6920,8 +6915,8 @@ function Set-SfosServiceGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -7058,8 +7053,8 @@ function Remove-SfosServiceGroup
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -7162,8 +7157,8 @@ function Add-SfosServiceGroupMember
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -7278,8 +7273,8 @@ function Remove-SfosServiceGroupMember
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -7414,8 +7409,8 @@ function Export-SfosServiceGroups {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -7465,7 +7460,7 @@ function Export-SfosServiceGroups {
             $serviceGroups | ConvertTo-Json | Out-File -FilePath $FilePath -Encoding UTF8
         }
 
-        Write-Host "Export of service groups to '$FilePath' successful." -ForegroundColor Green
+        Write-Information "Export of service groups to '$FilePath' successful." -InformationAction Continue
 
         # Return summary object
         return [PSCustomObject]@{
@@ -7556,8 +7551,8 @@ function Import-SfosServiceGroups {
         # Connection parameters (optional - use stored context if not provided)
         [string]$Firewall,
         [int]$Port = 4444,
-        [string]$Username,
-        [string]$Password,
+        [SecureString]$Username,
+        [SecureString]$Password,
         [switch]$SkipCertificateCheck
     )
 
@@ -7616,14 +7611,14 @@ function Import-SfosServiceGroups {
                 -SkipCertificateCheck:$params.SkipCertificateCheck
             
             $successItems += $group.Name
-            Write-Host "Imported: $($group.Name)" -ForegroundColor Green
+            Write-Information "Imported: $($group.Name)" -InformationAction Continue
         }
         catch {
             $failedItems += [PSCustomObject]@{
                 Name  = $group.Name
                 Error = $_.Exception.Message
             }
-            Write-Host "Error importing '$($group.Name)': $($_.Exception.Message)" -ForegroundColor Red
+            Write-Information "Error importing '$($group.Name)': $($_.Exception.Message)" -InformationAction Continue
         }
     }
 
@@ -7640,3 +7635,4 @@ function Import-SfosServiceGroups {
 }
 
 #endregion ServiceGroup
+
