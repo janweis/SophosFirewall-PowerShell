@@ -1,14 +1,14 @@
-@{
-    RootModule        = 'SophosFirewall.Core.psm1'
-    ModuleVersion     = '1.0.0'
-    GUID              = 'e480ca2a-0d74-4153-b3f1-a0aaf11dc2e8'
-    Author            = 'Jan Weis'
-    CompanyName       = 'RAWE-IT GbR'
-    Copyright         = '(c) 2025 RAWE-IT GbR. All rights reserved.'
-    Description       = 'Core helper functions for Sophos Firewall API modules. Provides session management, API communication, XML escaping, and response validation.'
-    PowerShellVersion = '5.1'
+﻿@{
+    RootModule           = 'SophosFirewall.Core.psm1'
+    ModuleVersion        = '1.0.0'
+    GUID                 = 'cf0350d0-30af-4cd9-ae9e-8eb43356718d'
+    Author               = 'Jan Weis'
+    Description          = 'Core helper functions for Sophos Firewall API modules. Provides session management, API communication, XML escaping, and response validation.'
     
-    FunctionsToExport = @(
+    PowerShellVersion    = '5.1'
+    CompatiblePSEditions = @('Desktop', 'Core')
+    
+    FunctionsToExport    = @(
         'Connect-SfosFirewall',
         'Disconnect-SfosFirewall',
         'Invoke-SfosApi',
@@ -18,15 +18,15 @@
         'ConvertTo-SfosXmlEscaped'
     )
     
-    CmdletsToExport   = @()
-    VariablesToExport = @('SfosConnection')
-    AliasesToExport   = @()
+    CmdletsToExport      = @()
+    VariablesToExport    = @('SfosConnection')
+    AliasesToExport      = @()
     
-    PrivateData       = @{
+    PrivateData          = @{
         PSData = @{
             Tags         = @('Sophos', 'Firewall', 'XGS', 'SFOS', 'API', 'Core', 'Helper')
             LicenseUri   = ''
-            ProjectUri   = ''
+            ProjectUri   = 'https://github.com/janweis/SophosFirewall-PowerShell/tree/main/Modules/SophosFirewall.Core'
             ReleaseNotes = @'
 Version 1.0.0 (2025-12-31)
 - Initial release
@@ -41,3 +41,4 @@ Version 1.0.0 (2025-12-31)
         }
     }
 }
+
