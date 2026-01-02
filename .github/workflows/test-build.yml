@@ -210,6 +210,9 @@ jobs:
       - name: Build Modules
         shell: pwsh
         run: |
+          # Define build output directory
+          $buildPath = Join-Path $PWD '_Build'
+          
           New-Item -ItemType Directory -Path $buildPath -Force | Out-Null
           
           # Copy all SophosFirewall modules to build directory
