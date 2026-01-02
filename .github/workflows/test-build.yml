@@ -42,6 +42,11 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
           
+          # Add Modules directory to PSModulePath for test file imports
+          $modulePath = Join-Path $PWD 'Modules'
+          $env:PSModulePath = "$modulePath;$env:PSModulePath"
+          Write-Host "Added to PSModulePath: $modulePath"
+          
           # Find test files in the Tests directory
           $testFiles = Get-ChildItem -Path 'Tests' -Recurse -Filter '*.Tests.ps1' -ErrorAction SilentlyContinue
           
@@ -53,7 +58,15 @@ jobs:
           Write-Host "Found $($testFiles.Count) test file(s)"
           
           try {
-            $testResults = Invoke-Pester -Path $testFiles.FullName -PassThru -OutputFormat NUnitXml -OutputFile TestResults.xml -ErrorAction Stop
+            # Use Pester 5 configuration instead of legacy parameters
+            $pesterConfig = New-PesterConfiguration
+            $pesterConfig.Run.Path = $testFiles.FullName
+            $pesterConfig.Run.PassThru = $true
+            $pesterConfig.TestResult.Enabled = $true
+            $pesterConfig.TestResult.OutputFormat = 'NUnitXml'
+            $pesterConfig.TestResult.OutputPath = 'TestResults.xml'
+            
+            $testResults = Invoke-Pester -Configuration $pesterConfig
             
             Write-Host "Test Results: Passed=$($testResults.PassedCount), Failed=$($testResults.FailedCount)"
             

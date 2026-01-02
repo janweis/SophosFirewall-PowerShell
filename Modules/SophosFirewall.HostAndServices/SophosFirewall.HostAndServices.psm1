@@ -625,7 +625,6 @@ function Set-SfosIpHost {
         [Parameter(Mandatory, ParameterSetName = 'Network')]
         [Parameter(Mandatory, ParameterSetName = 'IPRange')]
         [Parameter(Mandatory, ParameterSetName = 'IPList')]
-        [Parameter(Mandatory)]
         [ValidateSet('IP', 'Network', 'IPRange', 'IPList')]
         [string]$HostType,
 
